@@ -12,7 +12,7 @@ function loadCustom() {
 }
 function saveCustom(c) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); }
 
-const assets = { bg: null, logo: null };
+const assets = { bg: null, logo: null, owaf: null };
 const OTHER = "__other__";
 
 const $ = (id) => document.getElementById(id);
@@ -33,6 +33,7 @@ function readState() {
     price: $("f-price").value.trim(),
     disclaimer: $("f-disclaimer").value.trim(),
     accent: $("f-accent").value || BRAND.red,
+    owafPos: $("f-owaf-pos").value,
   };
   document.querySelectorAll("#dyn-fields [data-key]").forEach((el) => {
     s[el.dataset.key] = el.value;
@@ -317,7 +318,21 @@ function startApp(userEmail) {
 
   wireFileInput("f-bg", (img) => { assets.bg = img; });
   wireFileInput("f-logo", (img) => { assets.logo = img; });
+  wireFileInput("f-owaf", (img) => { assets.owaf = img; });
+  $("f-owaf-pos").addEventListener("change", scheduleRender);
   wireFontInput();
+
+  // masterbrand accent swatches
+  const sw = $("swatches");
+  for (const { name, hex } of BRAND_SWATCHES) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "swatch";
+    b.title = `${name} ${hex}`;
+    b.style.background = hex;
+    b.addEventListener("click", () => { $("f-accent").value = hex; scheduleRender(); });
+    sw.appendChild(b);
+  }
 
   $("download-all").addEventListener("click", downloadAll);
 

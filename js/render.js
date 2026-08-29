@@ -10,7 +10,10 @@
            previews when no background image is loaded.
    ============================================================ */
 
-const FONT_STACK = `"BrandFont","Helvetica Neue",Helvetica,Arial,sans-serif`;
+/* Masterbrand typography: Toyota Type is the only brand font; where it
+   is unavailable, Arial must be used. Upload Toyota Type in the app
+   (registered as "BrandFont") and it takes priority automatically. */
+const FONT_STACK = `"BrandFont","Toyota Type",Arial,"Helvetica Neue",sans-serif`;
 
 function F(px, weight = 800) {
   return `${weight} ${Math.round(px)}px ${FONT_STACK}`;
@@ -540,7 +543,7 @@ function drawPromo(ctx, W, H, s, assets, opts) {
 /* Micro layouts for MREC 300×250 and leaderboard 728×90. */
 function drawMicro(ctx, W, H, s, assets, opts) {
   const leaderboard = W / H > 3;
-  ctx.fillStyle = "#0b0b0d"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = BRAND.charcoal; ctx.fillRect(0, 0, W, H);
 
   const h1 = (tok(s.h1, s) + " " + tok(s.h2, s)).trim() || "NEW STOCK HAS LANDED";
   const cta = tok(s.cta, s) || "Learn more";
@@ -596,6 +599,31 @@ function drawMicro(ctx, W, H, s, assets, opts) {
   }
 }
 
+/* OWAF "OH WHAT A FEELING" tagline lock-up.
+   Per masterbrand rules it must be placed as the official logo file
+   (uploaded in the app), never typed out — so this only draws when the
+   asset is present. Auto placement avoids each template's busy corner. */
+const OWAF_AUTO_POS = {
+  arrival: "bottom-left", clearance: "bottom-right",
+  driveaway: "bottom-right", announce: "top-right", promo: "top-right",
+};
+
+function drawOwaf(ctx, W, H, templateId, s, assets) {
+  const img = assets.owaf;
+  if (!img) return;
+  let pos = s.owafPos && s.owafPos !== "auto" ? s.owafPos : OWAF_AUTO_POS[templateId] || "bottom-right";
+  // portrait arrival: bottom is the text panel, keep the tagline on the photo
+  if (templateId === "arrival" && H / W > 1.3 && (!s.owafPos || s.owafPos === "auto")) pos = "top-right";
+
+  const w = Math.min(W * 0.24, 460);
+  const h = w * (img.height / img.width);
+  const mx = W * 0.045;
+  const myTop = H * 0.045, myBot = H * 0.045 + (s.disclaimer ? H * 0.035 : 0);
+  const x = pos.endsWith("left") ? mx : W - mx - w;
+  const y = pos.startsWith("top") ? myTop : H - myBot - h;
+  ctx.drawImage(img, x, y, w, h);
+}
+
 const TEMPLATE_RENDERERS = {
   arrival: drawArrival,
   clearance: drawClearance,
@@ -613,5 +641,6 @@ function renderAd(canvas, size, templateId, state, assets, opts = {}) {
     drawMicro(ctx, size.w, size.h, state, assets, opts);
   } else {
     (TEMPLATE_RENDERERS[templateId] || drawArrival)(ctx, size.w, size.h, state, assets, opts);
+    drawOwaf(ctx, size.w, size.h, templateId, state, assets);
   }
 }

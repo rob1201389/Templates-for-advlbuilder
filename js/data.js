@@ -51,13 +51,28 @@ const AD_SIZES = [
   { id: "lb",   label: "Leaderboard 728×90",       w: 728,  h: 90,   on: false },
 ];
 
-/* Brand palette (masterbrand defaults — adjust to guidelines). */
+/* Brand palette — Dealer Masterbrand Quick Reference Guide.
+   Toyota Red PMS 186C / RGB 235 10 30. */
 const BRAND = {
-  red:   "#EB0A1E",
-  black: "#0B0B0B",
-  white: "#FFFFFF",
-  grey:  "#58595B",
+  red:       "#EB0A1E",
+  black:     "#000000",
+  charcoal:  "#1A1A1A",
+  slate:     "#3A3A3A",
+  grey:      "#808080",
+  steel:     "#CCCCCC",
+  lightGrey: "#EEEEEE",
+  webGrey:   "#F5F5F5",
+  white:     "#FFFFFF",
 };
+
+/* Quick-pick accent swatches shown next to the colour picker. */
+const BRAND_SWATCHES = [
+  { name: "Toyota Red", hex: BRAND.red },
+  { name: "Black",      hex: BRAND.black },
+  { name: "Charcoal",   hex: BRAND.charcoal },
+  { name: "Slate",      hex: BRAND.slate },
+  { name: "Grey",       hex: BRAND.grey },
+];
 
 /* Template definitions. Text fields support tokens:
    {MODEL} {GRADE} {COLOUR} {PRICE} {DEALER} — replaced at render time. */

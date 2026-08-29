@@ -92,16 +92,31 @@
 
       <section class="panel">
         <h3>4 · Brand &amp; imagery</h3>
-        <label class="field"><span>Accent colour</span>
-          <input id="f-accent" type="color" value="#EB0A1E">
+        <label class="field"><span>Accent colour (masterbrand palette)</span>
+          <span class="accent-row">
+            <input id="f-accent" type="color" value="#EB0A1E">
+            <span id="swatches" class="swatches"></span>
+          </span>
         </label>
         <label class="field"><span>Vehicle / background photo</span>
           <input id="f-bg" type="file" accept="image/*">
         </label>
-        <label class="field"><span>Dealer / Toyota logo (PNG with transparency)</span>
+        <label class="field"><span>Dealer composite logo / Toyota product logo (transparent PNG from AdBuilder)</span>
           <input id="f-logo" type="file" accept="image/*">
         </label>
-        <label class="field"><span>Brand font (optional .woff2/.ttf/.otf)</span>
+        <label class="field"><span>OWAF tagline logo (official “OH WHAT A FEELING” file from AdBuilder — never typed out)</span>
+          <input id="f-owaf" type="file" accept="image/*">
+        </label>
+        <label class="field"><span>OWAF placement</span>
+          <select id="f-owaf-pos">
+            <option value="auto">Auto (per template)</option>
+            <option value="top-left">Top left</option>
+            <option value="top-right">Top right</option>
+            <option value="bottom-left">Bottom left</option>
+            <option value="bottom-right">Bottom right</option>
+          </select>
+        </label>
+        <label class="field"><span>Toyota Type font file (optional .woff2/.ttf/.otf — Arial is used until loaded, per guidelines)</span>
           <input id="f-font" type="file" accept=".woff,.woff2,.ttf,.otf">
         </label>
       </section>

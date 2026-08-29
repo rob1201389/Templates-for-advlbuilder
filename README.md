@@ -22,9 +22,20 @@ ads from reusable templates. No build step, no server required — open
   pre-loaded (see `js/data.js`). Every dropdown also has an **Other…**
   option; typed entries can be saved to your own list (stored in the
   browser) with the **＋ Save** button.
-- **Imagery & brand** — upload a vehicle/background photo, a dealer or
-  Toyota logo (transparent PNG recommended), and optionally the brand
-  font file (`.woff2/.ttf/.otf`) so exports use the masterbrand typeface.
+- **Masterbrand compliance** (Dealer Masterbrand Quick Reference Guide):
+  - Exact colour palette built in — Toyota Red `#EB0A1E` (PMS 186C),
+    Black, Charcoal `#1A1A1A`, Slate `#3A3A3A`, Grey `#808080`, Steel,
+    Light Grey, Web Grey — with one-click accent swatches.
+  - Typography follows the rule "Toyota Type is the only font; where
+    unavailable, Arial must be used": the app renders in Arial until you
+    upload a Toyota Type font file, which then takes priority. No italics
+    are used anywhere.
+  - Upload slots for the **dealer composite logo / Toyota product logo**
+    and the official **OWAF "OH WHAT A FEELING" tagline logo** (placed as
+    the AdBuilder logo file, never typed out), with auto or manual corner
+    placement.
+- **Imagery** — upload a vehicle/background photo; templates cover-fit it
+  per aspect ratio.
 - **One-click export** — PNGs at exact pixel sizes:
   | Size | Use |
   |---|---|

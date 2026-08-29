@@ -101,6 +101,14 @@ body {
   background: #fff;
 }
 .field input[type="color"] { width: 56px; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; }
+.accent-row { display: flex; align-items: center; gap: 10px; }
+.swatches { display: flex; gap: 6px; }
+.swatch {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid #fff; outline: 1px solid var(--line);
+  cursor: pointer; padding: 0;
+}
+.swatch:hover { outline-color: #9aa0a8; }
 .field input[type="file"] { font-size: 12px; }
 .field :is(input,select,textarea):focus { outline: 2px solid #1113; border-color: #9aa0a8; }
 
