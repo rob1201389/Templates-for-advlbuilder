@@ -5,6 +5,14 @@
    own entries in-app (saved to the browser via localStorage).
    ============================================================ */
 
+/* Dealerships selectable in every template. "Other…" in the app lets
+   users type and save additional names. */
+const DEALERSHIPS = [
+  "Chatswood Toyota",
+  "Ryde Toyota",
+  "Chatswood & Ryde Toyota",
+];
+
 const TOYOTA_MODELS = [
   { name: "Yaris",            grades: ["Ascent Sport", "SX", "ZR"] },
   { name: "Yaris Cross",      grades: ["GX", "GXL", "Urban"] },

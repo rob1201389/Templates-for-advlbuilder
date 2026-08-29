@@ -49,9 +49,13 @@
 
       <section class="panel">
         <h3>2 · Vehicle &amp; offer</h3>
-        <label class="field"><span>Dealer name</span>
-          <input id="f-dealer" type="text" placeholder="e.g. Melbourne City Toyota">
+        <label class="field"><span>Dealership</span>
+          <select id="f-dealer"></select>
         </label>
+        <div id="f-dealer-other-wrap" class="other-row" hidden>
+          <input id="f-dealer-other" type="text" placeholder="Type dealership name">
+          <button id="save-dealer" class="btn small" type="button" title="Save to my list">＋ Save</button>
+        </div>
 
         <label class="field"><span>Model</span>
           <select id="f-model"></select>

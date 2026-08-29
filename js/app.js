@@ -6,9 +6,9 @@ const CUSTOM_KEY = "adbuilder_custom_lists";
 
 function loadCustom() {
   try {
-    return Object.assign({ models: [], grades: {}, colours: [] },
+    return Object.assign({ models: [], grades: {}, colours: [], dealers: [] },
       JSON.parse(localStorage.getItem(CUSTOM_KEY)) || {});
-  } catch { return { models: [], grades: {}, colours: [] }; }
+  } catch { return { models: [], grades: {}, colours: [], dealers: [] }; }
 }
 function saveCustom(c) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); }
 
@@ -26,7 +26,7 @@ function readState() {
   };
   const s = {
     templateId,
-    dealer: $("f-dealer").value.trim(),
+    dealer: pickDealer(),
     model: pick("f-model", "f-model-other"),
     grade: pick("f-grade", "f-grade-other"),
     colour: pick("f-colour", "f-colour-other"),
@@ -68,6 +68,13 @@ function gradesFor(model) {
 function allColours() {
   return TOYOTA_COLOURS.concat(loadCustom().colours);
 }
+function allDealers() {
+  return DEALERSHIPS.concat(loadCustom().dealers);
+}
+function pickDealer() {
+  const sel = $("f-dealer");
+  return sel.value === OTHER ? $("f-dealer-other").value.trim() : sel.value;
+}
 
 function wireOther(selId, otherWrapId) {
   $(selId).addEventListener("change", () => {
@@ -90,6 +97,17 @@ function refreshGrades() {
 
 /* "save to my list" buttons */
 function wireSaveButtons() {
+  $("save-dealer").addEventListener("click", () => {
+    const v = $("f-dealer-other").value.trim();
+    if (!v) return;
+    const c = loadCustom();
+    if (!c.dealers.includes(v) && !DEALERSHIPS.includes(v)) c.dealers.push(v);
+    saveCustom(c);
+    fillSelect($("f-dealer"), allDealers(), false);
+    $("f-dealer").value = v;
+    $("f-dealer-other-wrap").hidden = true;
+    scheduleRender();
+  });
   $("save-model").addEventListener("click", () => {
     const v = $("f-model-other").value.trim();
     if (!v) return;
@@ -301,19 +319,21 @@ function startApp(userEmail) {
 
   buildTemplatePicker();
   buildDynFields();
+  fillSelect($("f-dealer"), allDealers(), false);
   fillSelect($("f-model"), allModels(), false);
   refreshGrades();
   fillSelect($("f-colour"), allColours(), false);
   buildSizeChecks();
   buildPreviewGrid();
 
+  wireOther("f-dealer", "f-dealer-other-wrap");
   wireOther("f-model", "f-model-other-wrap");
   wireOther("f-grade", "f-grade-other-wrap");
   wireOther("f-colour", "f-colour-other-wrap");
   wireSaveButtons();
 
-  ["f-dealer", "f-price", "f-disclaimer", "f-accent",
-   "f-model-other", "f-grade-other", "f-colour-other"].forEach((id) =>
+  ["f-price", "f-disclaimer", "f-accent",
+   "f-dealer-other", "f-model-other", "f-grade-other", "f-colour-other"].forEach((id) =>
     $(id).addEventListener("input", scheduleRender));
 
   wireFileInput("f-bg", (img) => { assets.bg = img; });

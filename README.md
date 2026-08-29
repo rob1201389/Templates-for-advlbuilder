@@ -15,7 +15,10 @@ ads from reusable templates. No build step, no server required — open
   3. **Driveaway price** — large price with a pill-outline sub-line
   4. **Announcement** — photo block + bold headline + CTA bar
   5. **Seasonal promo** — headline top, vehicle photo centre, CTA button
-- **Customisable fields** — dealer name, model, grade, colour, price,
+- **Dealership picker** — Chatswood Toyota, Ryde Toyota, or the combined
+  "Chatswood & Ryde Toyota", plus Other… for ad-hoc names (savable to
+  your list). Edit the base list in `DEALERSHIPS` in `js/data.js`.
+- **Customisable fields** — model, grade, colour, price,
   headlines, sub-lines, tagline, CTA, disclaimer, accent colour.
   Copy fields support tokens `{MODEL} {GRADE} {COLOUR} {PRICE} {DEALER}`.
 - **Toyota Australia line-up built in** — models, grades and colours are
