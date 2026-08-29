@@ -149,8 +149,14 @@ function wireSaveButtons() {
 /* ---------- templates ---------- */
 const FIELD_LABELS = {
   h1: "Headline line 1", h2: "Headline line 2", h3: "Headline line 3",
+  h2accent: "Accent word (headline line 2)",
   sub1: "Sub-line 1", sub2: "Sub-line 2", pill: "Pill text",
   tagline: "Tagline", cta: "Call to action",
+  badge1: "Roundel line 1", badge2: "Roundel line 2", badge3: "Roundel line 3",
+  tc: "T&Cs line", hashtag: "Hashtag",
+  month: "Event month", dates: "Event dates (comma separated)",
+  offer: "Offer value", offerLabel: "Offer label",
+  foot1: "Footer line 1", foot2: "Footer line 2",
 };
 
 function buildTemplatePicker() {

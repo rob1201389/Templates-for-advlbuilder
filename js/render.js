@@ -599,6 +599,309 @@ function drawMicro(ctx, W, H, s, assets, opts) {
   }
 }
 
+/* 6. Retail stack — photo top, black+red headline, From-price lockup. */
+function drawRetail(ctx, W, H, s, assets, opts) {
+  const landscape = W / H > 1.4;
+  const portrait = H / W > 1.3;
+  const U = Math.min(W, H);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), tc = tok(s.tc, s), cta = tok(s.cta, s);
+
+  const photoW = landscape ? W * 0.52 : W;
+  const photoH = landscape ? H : H * (portrait ? 0.4 : 0.44);
+  drawBackground(ctx, W, H, assets, opts, 0.5, 0.35, 0, 0, photoW, photoH);
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
+
+  const pad = landscape ? photoW + W * 0.045 : W * 0.07;
+  const maxW = landscape ? W - pad - W * 0.045 : W - pad * 2;
+  let y = landscape ? H * 0.1 : photoH + H * 0.035;
+
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  const p1 = fitText(ctx, h1, maxW, U * (landscape ? 0.055 : 0.06), 900);
+  ctx.font = F(p1, 900); ctx.fillStyle = "#111";
+  y += p1; ctx.fillText(h1, pad, y);
+
+  const p2 = fitText(ctx, h2, maxW, U * (landscape ? 0.095 : 0.105), 900);
+  ctx.font = F(p2, 900); ctx.fillStyle = s.accent;
+  y += p2 * 1.12; ctx.fillText(h2, pad, y);
+
+  if (s.price) {
+    const fp = U * 0.032;
+    ctx.font = F(fp, 700); ctx.fillStyle = "#111";
+    y += fp * (portrait ? 2.6 : 2.1); ctx.fillText("From", pad, y);
+    const pp = fitText(ctx, s.price, maxW * 0.72, U * 0.082, 900);
+    ctx.font = F(pp, 900);
+    y += pp * 1.02; ctx.fillText(s.price, pad, y);
+    const pw = ctx.measureText(s.price).width;
+    ctx.font = F(pp * 0.3, 700);
+    ctx.fillText("Drive", pad + pw + pp * 0.25, y - pp * 0.42);
+    ctx.fillText("away*", pad + pw + pp * 0.25, y - pp * 0.08);
+  }
+
+  if (tc) {
+    const tp = U * 0.018;
+    ctx.font = F(tp, 500); ctx.fillStyle = "#666";
+    y += tp * 2.6;
+    ctx.fillText(wrapText(ctx, tc, maxW)[0] || "", pad, y);
+  }
+
+  const ctaCx = landscape ? pad + maxW / 2 : W / 2;
+  const ctaCy = Math.min(
+    H * (portrait ? 0.9 : 0.92) - (s.disclaimer ? H * 0.03 : 0),
+    y + H * (portrait ? 0.09 : 0.08));
+  drawCtaButton(ctx, cta.toUpperCase(), ctaCx, ctaCy, U * 0.03, s.accent, "#fff", maxW * 0.62);
+  drawDisclaimer(ctx, s, W, H, "#555", W * 0.04);
+}
+
+/* 7. Price roundel — red circle over the photo edge. */
+function drawBadgeTpl(ctx, W, H, s, assets, opts) {
+  const landscape = W / H > 1.4;
+  const portrait = H / W > 1.3;
+  const U = Math.min(W, H);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), h3 = tok(s.h3, s);
+  const sub1 = tok(s.sub1, s), sub2 = tok(s.sub2, s), cta = tok(s.cta, s);
+
+  const photoW = landscape ? W * 0.52 : W;
+  const photoH = landscape ? H : H * (portrait ? 0.38 : 0.42);
+  drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, photoW, photoH);
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
+
+  // red roundel straddling the photo edge
+  const b1 = tok(s.badge1, s), b2 = tok(s.badge2, s), b3 = tok(s.badge3, s);
+  if (b1 || b2 || b3) {
+    const r = U * 0.16;
+    const bx = landscape ? photoW : W * 0.78;
+    const by = landscape ? H * 0.28 : photoH;
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fillStyle = s.accent; ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const s1 = fitText(ctx, b1, r * 1.5, r * 0.22, 700);
+    ctx.font = F(s1, 700); ctx.fillText(b1, bx, by - r * 0.4);
+    const s2 = fitText(ctx, b2, r * 1.66, r * 0.4, 900);
+    ctx.font = F(s2, 900); ctx.fillText(b2, bx, by);
+    const s3 = fitText(ctx, b3, r * 1.5, r * 0.2, 700);
+    ctx.font = F(s3, 700); ctx.fillText(b3, bx, by + r * 0.42);
+  }
+
+  const pad = landscape ? photoW + W * 0.045 : W * 0.07;
+  const maxW = landscape ? W - pad - W * 0.045 : W - pad * 2;
+  let y = landscape ? H * 0.48 : photoH + H * 0.05;
+
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  const p1 = fitText(ctx, h1, maxW * 0.85, U * 0.052, 800);
+  ctx.font = F(p1, 800); ctx.fillStyle = "#111";
+  y += p1; ctx.fillText(h1, pad, y);
+
+  const p2 = fitText(ctx, h2, maxW, U * 0.11, 900);
+  ctx.font = F(p2, 900); ctx.fillStyle = s.accent;
+  y += p2 * 1.1; ctx.fillText(h2, pad, y);
+
+  if (h3) {
+    const p3 = fitText(ctx, h3, maxW * 0.7, U * 0.062, 800);
+    ctx.font = F(p3, 800); ctx.fillStyle = "#111";
+    y += p3 * 1.5; ctx.fillText(h3, pad, y);
+  }
+  if (sub1) {
+    const ps = fitText(ctx, sub1, maxW, U * 0.032, 700);
+    ctx.font = F(ps, 700); ctx.fillStyle = "#333";
+    y += ps * 2.1; ctx.fillText(sub1, pad, y);
+  }
+  if (sub2) {
+    const ps = fitText(ctx, sub2, maxW, U * 0.028, 500);
+    ctx.font = F(ps, 500); ctx.fillStyle = "#333";
+    y += ps * 1.6; ctx.fillText(sub2, pad, y);
+  }
+
+  const bw = drawCtaButton(ctx, cta + "  ›", pad + maxW * 0.22,
+    H * (portrait ? 0.92 : 0.93) - (s.disclaimer ? H * 0.025 : 0),
+    U * 0.026, "#3a3a3a", "#fff", maxW * 0.4);
+  drawDisclaimer(ctx, s, W, H, "#555", W * 0.04);
+}
+
+/* 8. Sale event — date banner over photo, offer + roundel below. */
+function drawEvent(ctx, W, H, s, assets, opts) {
+  const landscape = W / H > 1.4;
+  const portrait = H / W > 1.3;
+  const U = Math.min(W, H);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), hashtag = tok(s.hashtag, s);
+  const offer = tok(s.offer, s), offerLabel = tok(s.offerLabel, s);
+  const tc = tok(s.tc, s), cta = tok(s.cta, s);
+
+  const photoW = landscape ? W * 0.5 : W;
+  const photoH = landscape ? H : H * (portrait ? 0.36 : 0.4);
+  drawBackground(ctx, W, H, assets, opts, 0.5, 0.5, 0, 0, photoW, photoH);
+
+  // white date card with red header
+  const month = tok(s.month, s);
+  const dates = tok(s.dates, s).split(",").map((t) => t.trim()).filter(Boolean);
+  if (month || dates.length) {
+    const cw = Math.min(photoW * 0.84, U * 0.86);
+    const cx0 = (photoW - cw) / 2;
+    const cy0 = landscape ? H * 0.14 : H * 0.1;
+    const hh = U * 0.05, bodyH = U * 0.115;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.28)"; ctx.shadowBlur = U * 0.02;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(cx0, cy0, cw, hh + bodyH);
+    ctx.restore();
+    ctx.fillStyle = s.accent;
+    ctx.fillRect(cx0, cy0, cw, hh);
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = F(hh * 0.55, 800);
+    ctx.fillText(month, cx0 + cw / 2, cy0 + hh / 2 + hh * 0.03);
+    if (dates.length) {
+      const colW = cw / dates.length;
+      dates.forEach((d, i) => {
+        const parts = d.split(/\s+/);
+        const num = parts[0] || "", label = parts.slice(1).join(" ");
+        const cxCol = cx0 + colW * i + colW / 2;
+        const numPx = fitText(ctx, num, colW * 0.7, bodyH * 0.5, 900);
+        ctx.font = F(numPx, 900); ctx.fillStyle = "#111";
+        ctx.fillText(num, cxCol, cy0 + hh + bodyH * 0.42);
+        if (label) {
+          ctx.font = F(bodyH * 0.16, 700); ctx.fillStyle = "#555";
+          ctx.fillText(label.toUpperCase(), cxCol, cy0 + hh + bodyH * 0.78);
+        }
+        if (i > 0) {
+          ctx.strokeStyle = "#ddd"; ctx.lineWidth = Math.max(1, U * 0.002);
+          ctx.beginPath();
+          ctx.moveTo(cx0 + colW * i, cy0 + hh + bodyH * 0.15);
+          ctx.lineTo(cx0 + colW * i, cy0 + hh + bodyH * 0.85);
+          ctx.stroke();
+        }
+      });
+    }
+  }
+
+  const pad = landscape ? photoW + W * 0.045 : W * 0.07;
+  const maxW = landscape ? W - pad - W * 0.045 : W - pad * 2;
+  let y = landscape ? H * 0.14 : photoH + H * 0.05;
+
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  const p1 = fitText(ctx, h1, maxW * 0.8, U * 0.068, 900);
+  ctx.font = F(p1, 900); ctx.fillStyle = "#111";
+  y += p1; ctx.fillText(h1, pad, y);
+
+  const p2 = fitText(ctx, h2, maxW * 0.8, U * 0.085, 900);
+  ctx.font = F(p2, 900); ctx.fillStyle = s.accent;
+  y += p2 * 1.15; ctx.fillText(h2, pad, y);
+
+  if (offer) {
+    const po = fitText(ctx, offer, maxW * 0.62, U * 0.095, 900);
+    ctx.font = F(po, 900); ctx.fillStyle = "#111";
+    y += po * 1.35; ctx.fillText(offer, pad, y);
+    if (offerLabel) {
+      const pl = fitText(ctx, offerLabel, maxW * 0.6, U * 0.035, 600);
+      ctx.font = F(pl, 600);
+      y += pl * 1.7; ctx.fillText(offerLabel, pad, y);
+    }
+  }
+
+  // red roundel to the right of the offer
+  const b1 = tok(s.badge1, s), b2 = tok(s.badge2, s);
+  if (b1 || b2) {
+    const r = U * 0.115;
+    const bx = pad + maxW - r * 1.05;
+    const by = landscape ? H * 0.62 : photoH + (H - photoH) * 0.42;
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fillStyle = s.accent; ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const s1 = fitText(ctx, b1, r * 1.6, r * 0.34, 900);
+    ctx.font = F(s1, 900); ctx.fillText(b1, bx, by - r * 0.18);
+    const s2 = fitText(ctx, b2, r * 1.6, r * 0.34, 900);
+    ctx.font = F(s2, 900); ctx.fillText(b2, bx, by + r * 0.2);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+
+  if (hashtag) {
+    const ph = fitText(ctx, hashtag, maxW * 0.7, U * 0.03, 700);
+    ctx.font = F(ph, 700); ctx.fillStyle = "#111";
+    y += ph * 2.4; ctx.fillText(hashtag, pad, y);
+  }
+  if (tc) {
+    const tp = U * 0.017;
+    ctx.font = F(tp, 500); ctx.fillStyle = "#666";
+    let ty = y + tp * 2.4;
+    for (const ln of wrapText(ctx, tc, maxW * 0.75).slice(0, 2)) {
+      ctx.fillText(ln, pad, ty); ty += tp * 1.35;
+    }
+  }
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.05,
+    (landscape ? photoW : W) * 0.9, U * 0.028, "#fff");
+  drawDisclaimer(ctx, s, W, H, "#555", W * 0.04);
+}
+
+/* 9. Full-photo hero — centred stack with an accent word. */
+function drawHero(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  drawBackground(ctx, W, H, assets, opts, 0.5, 0.55);
+
+  // legibility gradients top and bottom
+  let g = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+  g.addColorStop(0, "rgba(6,14,30,0.72)"); g.addColorStop(1, "rgba(6,14,30,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 0.55);
+  g = ctx.createLinearGradient(0, H * 0.65, 0, H);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.6)");
+  ctx.fillStyle = g; ctx.fillRect(0, H * 0.65, W, H * 0.35);
+
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "#fff");
+
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), h2b = tok(s.h2accent, s);
+  const h3 = tok(s.h3, s), sub1 = tok(s.sub1, s);
+  const foot1 = tok(s.foot1, s), foot2 = tok(s.foot2, s), cta = tok(s.cta, s);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let y = H * 0.16;
+  if (h1) {
+    const p1 = fitText(ctx, h1, W * 0.8, U * 0.055, 700);
+    ctx.font = F(p1, 700); ctx.fillStyle = "#fff";
+    y += p1; ctx.fillText(h1, W / 2, y);
+  }
+  if (h2 || h2b) {
+    const joined = (h2 + " " + h2b).trim();
+    const p2 = fitText(ctx, joined, W * 0.86, U * 0.085, 900);
+    ctx.font = F(p2, 900);
+    y += p2 * 1.15;
+    const wA = h2 ? ctx.measureText(h2 + " ").width : 0;
+    const total = ctx.measureText(joined).width;
+    let x0 = W / 2 - total / 2;
+    ctx.textAlign = "left";
+    if (h2) { ctx.fillStyle = "#fff"; ctx.fillText(h2 + " ", x0, y); }
+    if (h2b) { ctx.fillStyle = s.accent; ctx.fillText(h2b, x0 + wA, y); }
+    ctx.textAlign = "center";
+  }
+  if (h3) {
+    const p3 = fitText(ctx, h3, W * 0.88, U * 0.1, 900);
+    ctx.font = F(p3, 900); ctx.fillStyle = "#fff";
+    y += p3 * 1.15; ctx.fillText(h3, W / 2, y);
+  }
+  if (sub1) {
+    const ps = fitText(ctx, sub1, W * 0.82, U * 0.032, 500);
+    ctx.font = F(ps, 500); ctx.fillStyle = "rgba(255,255,255,0.92)";
+    y += ps * 2.2; ctx.fillText(sub1, W / 2, y);
+  }
+
+  let fy = H * (s.disclaimer ? 0.76 : 0.78);
+  if (foot1) {
+    const pf = fitText(ctx, foot1, W * 0.8, U * 0.06, 900);
+    ctx.font = F(pf, 900); ctx.fillStyle = "#fff";
+    ctx.fillText(foot1, W / 2, fy);
+    fy += pf * 0.72;
+  }
+  if (foot2) {
+    const pf2 = fitText(ctx, foot2, W * 0.7, U * 0.032, 500);
+    ctx.font = F(pf2, 500); ctx.fillStyle = "rgba(255,255,255,0.95)";
+    fy += pf2 * 1.1; ctx.fillText(foot2, W / 2, fy);
+  }
+  if (cta) {
+    drawCtaButton(ctx, cta, W / 2, H * 0.9 - (s.disclaimer ? H * 0.025 : 0),
+      U * 0.028, "#f4f4f4", "#111", W * 0.3);
+  }
+  drawDisclaimer(ctx, s, W, H, "#fff", W * 0.04);
+}
+
 /* OWAF "OH WHAT A FEELING" tagline lock-up.
    Per masterbrand rules it must be placed as the official logo file
    (uploaded in the app), never typed out — so this only draws when the
@@ -606,6 +909,8 @@ function drawMicro(ctx, W, H, s, assets, opts) {
 const OWAF_AUTO_POS = {
   arrival: "bottom-left", clearance: "bottom-right",
   driveaway: "bottom-right", announce: "top-right", promo: "top-right",
+  retail: "top-right", badge: "top-right", event: "bottom-right",
+  hero: "bottom-left",
 };
 
 function drawOwaf(ctx, W, H, templateId, s, assets) {
@@ -630,6 +935,10 @@ const TEMPLATE_RENDERERS = {
   driveaway: drawDriveaway,
   announce: drawAnnounce,
   promo: drawPromo,
+  retail: drawRetail,
+  badge: drawBadgeTpl,
+  event: drawEvent,
+  hero: drawHero,
 };
 
 function renderAd(canvas, size, templateId, state, assets, opts = {}) {

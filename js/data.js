@@ -134,4 +134,50 @@ const TEMPLATES = [
       cta: "Book a test drive!",
     },
   },
+  {
+    id: "retail",
+    name: "Retail stack — big model name",
+    hint: "Photo top, black + red stacked headline, From-price lockup and CTA on white.",
+    defaults: {
+      h1: "HEAVY HITTING", h2: "{MODEL}",
+      tc: "*T&C's apply. Price relates to {MODEL} {GRADE}.",
+      cta: "Get our stocklist",
+    },
+  },
+  {
+    id: "badge",
+    name: "Price roundel — red circle",
+    hint: "Red price circle over the photo edge, In-Stock message on white.",
+    defaults: {
+      badge1: "NOW FROM", badge2: "{PRICE}*", badge3: "DRIVEAWAY",
+      h1: "HURRY IN FOR", h2: "{MODEL}", h3: "In Stock",
+      sub1: "Ready for immediate delivery", sub2: "at {DEALER}",
+      cta: "Get offer",
+    },
+  },
+  {
+    id: "event",
+    name: "Sale event — date banner",
+    hint: "White date card over the photo, offer value, red roundel, hashtag.",
+    defaults: {
+      month: "AUGUST", dates: "21st Friday, 22nd Saturday, 23rd Sunday",
+      h1: "READY | SET", h2: "TRADE",
+      offer: "$3,000*", offerLabel: "Trade-In Bonus",
+      badge1: "3 DAYS", badge2: "ONLY",
+      hashtag: "#LandABetterDeal",
+      tc: "*T&C's apply. See dealer for terms and conditions.",
+      cta: "Book now",
+    },
+  },
+  {
+    id: "hero",
+    name: "Full-photo hero — centred",
+    hint: "Full-bleed image, centred stacked headline with an accent word, footer CTA.",
+    defaults: {
+      h1: "All-New", h2: "All-", h2accent: "Electric", h3: "{MODEL}",
+      sub1: "More space. More power. More adventure",
+      foot1: "In Stock Now", foot2: "at {DEALER}",
+      cta: "Learn More",
+    },
+  },
 ];
