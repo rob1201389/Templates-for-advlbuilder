@@ -291,15 +291,92 @@ function buildPreviewGrid() {
     card.innerHTML = `
       <div class="preview-head">
         <span>${sz.label}</span>
-        <button class="btn small" data-dl="${sz.id}">PNG</button>
+        <span class="preview-actions">
+          <button class="btn small" data-pptx="${sz.id}" title="Layered file — upload to Canva or open in PowerPoint to move every element">PPTX</button>
+          <button class="btn small" data-dl="${sz.id}">PNG</button>
+        </span>
       </div>`;
     const canvas = document.createElement("canvas");
     canvas.dataset.sizeId = sz.id;
     card.appendChild(canvas);
     grid.appendChild(card);
+    enableTextDrag(canvas);
   }
   grid.querySelectorAll("button[data-dl]").forEach((b) =>
     b.addEventListener("click", () => downloadOne(b.dataset.dl)));
+  grid.querySelectorAll("button[data-pptx]").forEach((b) =>
+    b.addEventListener("click", () => exportLayered(b.dataset.pptx)));
+}
+
+/* ---------- drag text on previews ---------- */
+function layerHitAt(canvas, px, py) {
+  const layers = canvas._layers || [];
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const L = layers[i];
+    if (!L.key) continue;
+    let bx, by, bw, bh;
+    if (L.type === "cta") { bx = L.x; by = L.y; bw = L.w; bh = L.h; }
+    else if (L.type === "text") {
+      bw = L.w; bh = L.px * 1.3;
+      bx = L.align === "center" ? L.x - bw / 2 : L.align === "right" ? L.x - bw : L.x;
+      by = L.baseline === "middle" ? L.y - bh / 2 : L.y - L.px * 1.05;
+    } else continue;
+    const m = 8;
+    if (px >= bx - m && px <= bx + bw + m && py >= by - m && py <= by + bh + m) return L;
+  }
+  return null;
+}
+
+function enableTextDrag(canvas) {
+  let drag = null, raf = 0;
+  canvas.style.touchAction = "none";
+  const scale = () => {
+    const r = canvas.getBoundingClientRect();
+    return { sx: canvas.width / r.width, sy: canvas.height / r.height, r };
+  };
+  canvas.addEventListener("pointerdown", (e) => {
+    const { sx, sy, r } = scale();
+    const L = layerHitAt(canvas, (e.clientX - r.left) * sx, (e.clientY - r.top) * sy);
+    if (!L) return;
+    drag = {
+      key: L.key, x0: e.clientX, y0: e.clientY,
+      base: Object.assign({ dx: 0, dy: 0 }, NUDGE[L.key]),
+      fx: sx / canvas.width, fy: sy / canvas.height,
+    };
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drag) {
+      const { sx, sy, r } = scale();
+      canvas.style.cursor =
+        layerHitAt(canvas, (e.clientX - r.left) * sx, (e.clientY - r.top) * sy) ? "grab" : "";
+      return;
+    }
+    NUDGE[drag.key] = {
+      dx: drag.base.dx + (e.clientX - drag.x0) * drag.fx,
+      dy: drag.base.dy + (e.clientY - drag.y0) * drag.fy,
+    };
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderOne(canvas); });
+  });
+  const end = () => { if (drag) { drag = null; canvas.style.cursor = ""; renderAll(); } };
+  canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("pointercancel", end);
+  canvas.addEventListener("dblclick", (e) => {
+    const { sx, sy, r } = scale();
+    const L = layerHitAt(canvas, (e.clientX - r.left) * sx, (e.clientY - r.top) * sy);
+    if (L) { delete NUDGE[L.key]; renderAll(); }
+  });
+}
+
+function renderOne(canvas) {
+  const s = readState();
+  const sz = AD_SIZES.find((x) => x.id === canvas.dataset.sizeId);
+  REC = [];
+  renderAd(canvas, sz, s.templateId, s, assets, { hint: true });
+  canvas._layers = REC;
+  REC = null;
 }
 
 let renderTimer = null;
@@ -309,11 +386,7 @@ function scheduleRender() {
 }
 
 function renderAll() {
-  const s = readState();
-  document.querySelectorAll("#preview-grid canvas").forEach((canvas) => {
-    const sz = AD_SIZES.find((x) => x.id === canvas.dataset.sizeId);
-    renderAd(canvas, sz, s.templateId, s, assets, { hint: true });
-  });
+  document.querySelectorAll("#preview-grid canvas").forEach(renderOne);
 }
 
 /* ---------- export ---------- */
@@ -332,16 +405,96 @@ function fileNameFor(s, sz) {
   return `${slug(s.dealer, "toyota")}-${slug(s.model, s.templateId)}-${sz.w}x${sz.h}.png`;
 }
 
+function saveBlob(blob, name) {
+  return new Promise((resolve) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); resolve(); }, 250);
+  });
+}
+
 function downloadCanvas(canvas, name) {
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); resolve(); }, 250);
-    }, "image/png");
+    canvas.toBlob((blob) => saveBlob(blob, name).then(resolve), "image/png");
   });
+}
+
+/* ---------- layered PPTX export (editable in Canva/PowerPoint) ---------- */
+function colorToPptx(c) {
+  c = String(c);
+  let m = /^#([0-9a-f]{6})$/i.exec(c);
+  if (m) return { color: m[1].toUpperCase(), transparency: 0 };
+  m = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(c);
+  if (m) {
+    const hex = [m[1], m[2], m[3]]
+      .map((v) => (+v).toString(16).padStart(2, "0")).join("").toUpperCase();
+    const a = m[4] === undefined ? 1 : +m[4];
+    return { color: hex, transparency: Math.round((1 - a) * 100) };
+  }
+  return { color: "000000", transparency: 0 };
+}
+
+function imgToDataUrl(img) {
+  if (img instanceof HTMLCanvasElement) return img.toDataURL("image/png");
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/png");
+}
+
+async function exportLayered(sizeId) {
+  if (typeof PptxGenJS === "undefined") {
+    alert("The PowerPoint export library did not load."); return;
+  }
+  const s = readState();
+  const sz = AD_SIZES.find((x) => x.id === sizeId);
+  const IN = 96; // px per inch
+  const layers = renderAdLayers(sz, s.templateId, s, assets);
+  const bg = renderAdBackground(sz, s.templateId, s, assets);
+
+  const pptx = new PptxGenJS();
+  pptx.defineLayout({ name: "ad", width: sz.w / IN, height: sz.h / IN });
+  pptx.layout = "ad";
+  const slide = pptx.addSlide();
+  slide.addImage({ data: bg.toDataURL("image/png"), x: 0, y: 0, w: sz.w / IN, h: sz.h / IN });
+
+  for (const L of layers) {
+    if (L.type === "img") {
+      slide.addImage({ data: imgToDataUrl(L.img), x: L.x / IN, y: L.y / IN, w: L.w / IN, h: L.h / IN });
+    } else if (L.type === "cta") {
+      slide.addText(L.text, {
+        shape: "roundRect", rectRadius: Math.min(L.w, L.h) / 2 / IN,
+        fill: { color: colorToPptx(L.bg).color },
+        color: colorToPptx(L.fg).color,
+        x: L.x / IN, y: L.y / IN, w: L.w / IN, h: L.h / IN,
+        align: "center", valign: "middle",
+        fontSize: Math.max(6, L.px * 0.75), bold: true, fontFace: "Arial",
+        margin: 0,
+      });
+    } else {
+      const padW = L.w + L.px;
+      const bx = L.align === "center" ? L.x - padW / 2
+        : L.align === "right" ? L.x - padW + L.px * 0.5
+        : L.x - L.px * 0.5;
+      const bh = L.px * 1.5;
+      const by = L.baseline === "middle" ? L.y - bh / 2 : L.y - L.px * 1.08;
+      const col = colorToPptx(L.color);
+      slide.addText(L.text, {
+        x: bx / IN, y: by / IN, w: padW / IN, h: bh / IN,
+        align: L.align === "right" ? "right" : L.align === "center" ? "center" : "left",
+        valign: "middle",
+        fontSize: Math.max(6, L.px * 0.75), bold: L.weight >= 700,
+        fontFace: "Arial",
+        color: col.color, transparency: col.transparency,
+        margin: 0, wrap: false,
+      });
+    }
+  }
+  const blob = await pptx.write("blob");
+  await saveBlob(blob, fileNameFor(s, sz).replace(/\.png$/, "") + "-layered.pptx");
 }
 
 function downloadOne(sizeId) {
@@ -404,6 +557,10 @@ function startApp(userEmail) {
   }
 
   $("download-all").addEventListener("click", downloadAll);
+  $("reset-nudge").addEventListener("click", () => {
+    for (const k of Object.keys(NUDGE)) delete NUDGE[k];
+    renderAll();
+  });
 
   loadDealerLogos();
   loadOwafPack();

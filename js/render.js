@@ -152,8 +152,64 @@ function drawOverlayImg(ctx, x, y, w, h) {
   if (CUR && CUR.ovPos === "left") dx = x + w * 0.02;
   if (CUR && CUR.ovPos === "right") dx = x + w - dw - w * 0.02;
   const dy = y + h - dh;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  putImage(ctx, "overlay", img, dx, dy, dw, dh);
   return { x: dx, y: dy, w: dw, h: dh };
+}
+
+/* ---- Layer recording & text nudging ----------------------------------
+   REC:      when set to an array, every text, image, and CTA drawn is
+             recorded into it (used for drag hit-testing and the layered
+             PPTX export).
+   SUPPRESS: when set, matching element kinds are recorded but not
+             painted (used to produce the flattened background layer).
+   NUDGE:    per-field {dx,dy} offsets (fractions of canvas size) applied
+             wherever that field's text is drawn — this is what dragging
+             text on a preview writes to. */
+let REC = null;
+let SUPPRESS = null;
+const NUDGE = {};
+
+const NUDGE_KEYS = ["h1", "h2", "h3", "h2accent", "sub1", "sub2", "pill",
+  "tagline", "kicker", "giant", "bar", "offer", "offerLabel", "hashtag",
+  "month", "foot1", "foot2"];
+
+function buildNudgeLookup(s) {
+  const m = new Map();
+  for (const k of NUDGE_KEYS) {
+    const v = tok(s[k], s);
+    if (v) { m.set(v, k); m.set(v.toUpperCase(), k); }
+  }
+  if (s.price) { m.set(s.price, "price"); m.set(s.price + "*", "price"); }
+  return m;
+}
+
+/* Record/suppress-aware image painter for logo, OWAF, and overlay. */
+function putImage(ctx, kind, img, x, y, w, h) {
+  if (REC) REC.push({ type: "img", kind, img, x, y, w, h });
+  if (SUPPRESS && SUPPRESS[kind]) return;
+  ctx.drawImage(img, x, y, w, h);
+}
+
+/* Average luminance (0..1) of a canvas region — used to pick ink that
+   stays legible over whatever photo sits underneath. */
+function luminanceAt(ctx, x, y, w, h) {
+  try {
+    const cw = ctx.canvas.width, ch = ctx.canvas.height;
+    x = Math.max(0, Math.min(cw - 2, x | 0));
+    y = Math.max(0, Math.min(ch - 2, y | 0));
+    w = Math.max(1, Math.min(cw - x, w | 0));
+    h = Math.max(1, Math.min(ch - y, h | 0));
+    const d = ctx.getImageData(x, y, w, h).data;
+    let sum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 16) {
+      sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      n++;
+    }
+    return n ? sum / (n * 255) : 0.35;
+  } catch { return 0.35; }
+}
+function autoInk(ctx, x, y, w, h) {
+  return luminanceAt(ctx, x, y, w, h) > 0.6 ? "#1A1A1A" : "#FFFFFF";
 }
 
 /* Tint a monochrome-ink transparent image to a solid colour. */
@@ -178,13 +234,15 @@ function tinted(img, colour) {
 /* Dealer identity block: built-in composite lockup (tinted to suit the
    template), a custom uploaded logo + name, or the name as text. */
 function drawDealerMark(ctx, s, assets, x, y, maxW, px, colour, align = "left") {
+  // "auto": sample what's behind the mark and pick legible ink
+  if (colour === "auto") colour = autoInk(ctx, x, y - px * 1.4, maxW, px * 2.8);
   if (!assets.logo && assets.logoPack && assets.logoPack.h) {
     const img = tinted(assets.logoPack.h, colour);
     let h = px * 2.7;
     let w = img.width * (h / img.height);
     if (w > maxW) { w = maxW; h = img.height * (w / img.width); }
     const lx = align === "right" ? x + maxW - w : x;
-    ctx.drawImage(img, lx, y - h / 2, w, h);
+    putImage(ctx, "logo", img, lx, y - h / 2, w, h);
     return;
   }
   ctx.save();
@@ -194,7 +252,7 @@ function drawDealerMark(ctx, s, assets, x, y, maxW, px, colour, align = "left") 
   if (assets.logo) {
     const lw = assets.logo.width * (logoH / assets.logo.height);
     if (align === "left") {
-      ctx.drawImage(assets.logo, cursor, y - logoH / 2, lw, logoH);
+      putImage(ctx, "logo", assets.logo, cursor, y - logoH / 2, lw, logoH);
       cursor += lw + px * 0.6;
     } else {
       // right aligned: name then logo from the right edge
@@ -202,7 +260,7 @@ function drawDealerMark(ctx, s, assets, x, y, maxW, px, colour, align = "left") 
       const nameW = s.dealer ? ctx.measureText(s.dealer).width : 0;
       const total = lw + (nameW ? px * 0.6 + nameW : 0);
       let lx = x + maxW - total;
-      ctx.drawImage(assets.logo, lx, y - logoH / 2, lw, logoH);
+      putImage(ctx, "logo", assets.logo, lx, y - logoH / 2, lw, logoH);
       if (s.dealer) {
         ctx.fillStyle = colour;
         ctx.textAlign = "left";
@@ -250,18 +308,25 @@ function drawDisclaimer(ctx, s, W, H, colour, pad) {
 
 /* CTA pill button. Returns its rect. */
 function drawCtaButton(ctx, text, cx, cy, px, bg, fg, minW = 0) {
+  if (NUDGE.cta) {
+    cx += NUDGE.cta.dx * ctx.canvas.width;
+    cy += NUDGE.cta.dy * ctx.canvas.height;
+  }
   ctx.font = F(px, 700);
   const tw = ctx.measureText(text).width;
   const w = Math.max(minW, tw + px * 2.4);
   const h = px * 2.2;
-  roundRectPath(ctx, cx - w / 2, cy - h / 2, w, h, h / 2);
+  const rect = { x: cx - w / 2, y: cy - h / 2, w, h };
+  if (REC) REC.push({ type: "cta", key: "cta", text, x: rect.x, y: rect.y, w, h, px, bg, fg });
+  if (SUPPRESS && SUPPRESS.cta) return rect;
+  roundRectPath(ctx, rect.x, rect.y, w, h, h / 2);
   ctx.fillStyle = bg;
   ctx.fill();
   ctx.fillStyle = fg;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, cx, cy + px * 0.06);
-  return { x: cx - w / 2, y: cy - h / 2, w, h };
+  (ctx.__origFillText || ctx.fillText.bind(ctx))(text, cx, cy + px * 0.06);
+  return rect;
 }
 
 /* ================= TEMPLATES ================= */
@@ -272,19 +337,24 @@ function drawArrival(ctx, W, H, s, assets, opts) {
   drawBackground(ctx, W, H, assets, opts, portrait ? 0.5 : 0.3, 0.5);
 
   if (!portrait) {
-    // Dark circle panel on the right
-    const cx = W * 0.74, cy = H * 0.5, r = Math.max(W * 0.42, H * 0.78);
+    // Dark circle panel on the right — photo keeps ~45% of the canvas
+    const landscape = W / H > 1.4;
+    const edge = W * (landscape ? 0.46 : 0.4); // panel's left edge at mid-height
+    const r = H * (landscape ? 1.0 : 0.92);
+    const cx = edge + r, cy = H * 0.5;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(8,8,10,0.94)"; ctx.fill();
     ctx.restore();
-    drawOverlayImg(ctx, 0, H * 0.2, W * 0.66, H * 0.72);
+    drawOverlayImg(ctx, 0, H * 0.2, edge + W * 0.06, H * 0.72);
 
-    const tx = Math.max(W * 0.62, W - r * 0.9);
-    const colW = W - tx - W * 0.05;
+    const tx = edge + W * 0.06;
+    const colW = W - tx - W * 0.04;
     const cxT = tx + colW / 2;
 
-    drawDealerMark(ctx, s, assets, tx, H * 0.12, colW, Math.min(W, H) * 0.032, "#fff");
+    // right-aligned so the lockup stays on the dark panel
+    drawDealerMark(ctx, s, assets, W * 0.52, H * 0.11, W * 0.44,
+      Math.min(W, H) * 0.03, "#fff", "right");
 
     ctx.textAlign = "center";
     let y = H * 0.36;
@@ -334,7 +404,7 @@ function drawArrival(ctx, W, H, s, assets, opts) {
     drawOverlayImg(ctx, 0, H * 0.1, W, H * 0.44);
 
     const cxT = W / 2, colW = W * 0.86;
-    drawDealerMark(ctx, s, assets, W * 0.07, H * 0.06, W * 0.86, W * 0.035, "#fff");
+    drawDealerMark(ctx, s, assets, W * 0.07, H * 0.06, W * 0.86, W * 0.035, "auto");
 
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
     let y = panelTop + H * 0.12;
@@ -434,7 +504,7 @@ function drawDriveaway(ctx, W, H, s, assets, opts) {
   drawOverlayImg(ctx, W * 0.28, H * 0.32, W * 0.7, H * 0.58);
 
   const pad = W * 0.07;
-  drawDealerMark(ctx, s, assets, pad, H * 0.08, W - pad * 2, Math.min(W, H) * 0.032, "#fff");
+  drawDealerMark(ctx, s, assets, pad, H * 0.08, W - pad * 2, Math.min(W, H) * 0.032, "auto");
 
   const portrait = H / W > 1.3;
   const maxW = W * (portrait ? 0.86 : 0.6);
@@ -490,7 +560,7 @@ function drawAnnounce(ctx, W, H, s, assets, opts) {
     const photoH = H * 0.56;
     drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, W, photoH);
     drawOverlayImg(ctx, 0, 0, W, photoH + H * 0.04);
-    drawDealerMark(ctx, s, assets, W * 0.05, H * 0.05, W * 0.9, Math.min(W, H) * 0.03, "#fff");
+    drawDealerMark(ctx, s, assets, W * 0.05, H * 0.05, W * 0.9, Math.min(W, H) * 0.03, "auto");
 
     const pad = W * 0.06;
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -525,7 +595,7 @@ function drawAnnounce(ctx, W, H, s, assets, opts) {
     const photoW = W * 0.58;
     drawBackground(ctx, W, H, assets, opts, 0.5, 0.45, 0, 0, photoW, H);
     drawOverlayImg(ctx, 0, H * 0.15, photoW, H * 0.75);
-    drawDealerMark(ctx, s, assets, W * 0.03, H * 0.09, photoW * 0.9, Math.min(W, H) * 0.045, "#fff");
+    drawDealerMark(ctx, s, assets, W * 0.03, H * 0.09, photoW * 0.9, Math.min(W, H) * 0.045, "auto");
 
     const pad = W * 0.04;
     const tx = photoW + pad, tw = W - photoW - pad * 2;
@@ -676,7 +746,7 @@ function drawRetail(ctx, W, H, s, assets, opts) {
   const photoH = landscape ? H : H * (portrait ? 0.4 : 0.44);
   drawBackground(ctx, W, H, assets, opts, 0.5, 0.35, 0, 0, photoW, photoH);
   drawOverlayImg(ctx, 0, 0, photoW, landscape ? H * 0.85 : photoH + H * 0.04);
-  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "auto");
 
   const pad = landscape ? photoW + W * 0.045 : W * 0.07;
   const maxW = landscape ? W - pad - W * 0.045 : W - pad * 2;
@@ -732,7 +802,7 @@ function drawBadgeTpl(ctx, W, H, s, assets, opts) {
   const photoH = landscape ? H : H * (portrait ? 0.38 : 0.42);
   drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, photoW, photoH);
   drawOverlayImg(ctx, 0, 0, photoW, landscape ? H * 0.85 : photoH + H * 0.04);
-  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "auto");
 
   // red roundel straddling the photo edge
   const b1 = tok(s.badge1, s), b2 = tok(s.badge2, s), b3 = tok(s.badge3, s);
@@ -897,7 +967,7 @@ function drawEvent(ctx, W, H, s, assets, opts) {
     }
   }
   drawDealerMark(ctx, s, assets, W * 0.045, H * 0.05,
-    (landscape ? photoW : W) * 0.9, U * 0.028, "#fff");
+    (landscape ? photoW : W) * 0.9, U * 0.028, "auto");
   drawDisclaimer(ctx, s, W, H, "#555", W * 0.04);
 }
 
@@ -915,7 +985,7 @@ function drawHero(ctx, W, H, s, assets, opts) {
   ctx.fillStyle = g; ctx.fillRect(0, H * 0.65, W, H * 0.35);
   drawOverlayImg(ctx, 0, H * 0.32, W, H * 0.42);
 
-  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "#fff");
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "auto");
 
   const h1 = tok(s.h1, s), h2 = tok(s.h2, s), h2b = tok(s.h2accent, s);
   const h3 = tok(s.h3, s), sub1 = tok(s.sub1, s);
@@ -1001,7 +1071,7 @@ function drawVelocity(ctx, W, H, s, assets, opts) {
   ctx.closePath();
   ctx.fillStyle = "rgba(16,16,18,0.96)"; ctx.fill();
 
-  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "#fff");
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "auto");
 
   const pad = W * 0.06;
   const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), h2 = tok(s.h2, s), cta = tok(s.cta, s);
@@ -1120,7 +1190,7 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
   g.addColorStop(0, "rgba(255,255,255,0.14)"); g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.028, "#fff");
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.028, "auto");
 
   const kicker = tok(s.kicker, s), giant = (tok(s.giant, s) || "").toUpperCase();
   const sub1 = tok(s.sub1, s), cta = tok(s.cta, s);
@@ -1190,26 +1260,40 @@ const OWAF_AUTO_POS = {
 
 function drawOwaf(ctx, W, H, templateId, s, assets) {
   let img = assets.owaf; // custom upload always wins
+  let variant = null;
   if (!img) {
-    const variant = !s.owafVariant || s.owafVariant === "auto"
-      ? OWAF_AUTO_VARIANT[templateId] || "white"
-      : s.owafVariant;
+    variant = !s.owafVariant || s.owafVariant === "auto" ? "auto" : s.owafVariant;
     if (variant === "off") return;
-    img = assets.owafPack && assets.owafPack[variant];
   }
-  if (!img) return;
   let pos = s.owafPos && s.owafPos !== "auto" ? s.owafPos : OWAF_AUTO_POS[templateId] || "bottom-right";
   // portrait arrival: bottom is the text panel, keep the tagline on the photo
   if (templateId === "arrival" && H / W > 1.3 && (!s.owafPos || s.owafPos === "auto")) pos = "top-right";
 
-  const wide = img.width / img.height > 5; // single-line lock-up
-  const w = wide ? Math.min(W * 0.34, 640) : Math.min(W * 0.2, 400);
-  const h = w * (img.height / img.width);
   const mx = W * 0.045;
   const myTop = H * 0.045, myBot = H * 0.045 + (s.disclaimer ? H * 0.035 : 0);
-  const x = pos.endsWith("left") ? mx : W - mx - w;
-  const y = pos.startsWith("top") ? myTop : H - myBot - h;
-  ctx.drawImage(img, x, y, w, h);
+  const place = (im) => {
+    const wide = im.width / im.height > 5; // single-line lock-up
+    const w = wide ? Math.min(W * 0.34, 640) : Math.min(W * 0.2, 400);
+    const h = w * (im.height / im.width);
+    return {
+      w, h,
+      x: pos.endsWith("left") ? mx : W - mx - w,
+      y: pos.startsWith("top") ? myTop : H - myBot - h,
+    };
+  };
+  if (!img) {
+    if (variant === "auto") {
+      // pick a variant that stays legible over what's actually behind it
+      const probe = assets.owafPack && (assets.owafPack.white || assets.owafPack.red);
+      if (!probe) return;
+      const r0 = place(probe);
+      variant = luminanceAt(ctx, r0.x, r0.y, r0.w, r0.h) > 0.6 ? "red" : "white";
+    }
+    img = assets.owafPack && assets.owafPack[variant];
+  }
+  if (!img) return;
+  const r = place(img);
+  putImage(ctx, "owaf", img, r.x, r.y, r.w, r.h);
 }
 
 const TEMPLATE_RENDERERS = {
@@ -1232,6 +1316,34 @@ function renderAd(canvas, size, templateId, state, assets, opts = {}) {
   canvas.height = size.h;
   const ctx = canvas.getContext("2d");
   CUR = state; CUR_ASSETS = assets;
+
+  // Intercept fillText once per context: applies NUDGE offsets to known
+  // fields, records layers when REC is set, respects SUPPRESS.text.
+  if (!ctx.__origFillText) {
+    ctx.__origFillText = ctx.fillText.bind(ctx);
+    ctx.fillText = function (text, x, y) {
+      text = String(text);
+      const lookup = ctx.__lookup;
+      const key = lookup ? (lookup.get(text) || lookup.get(text.trim()) || null) : null;
+      const n = key && NUDGE[key];
+      if (n) { x += n.dx * canvas.width; y += n.dy * canvas.height; }
+      if (REC) {
+        const fm = /(\d+(?:\.\d+)?)px/.exec(ctx.font);
+        const wm = /^(\d+)/.exec(ctx.font);
+        REC.push({
+          type: "text", key, text, x, y,
+          w: ctx.measureText(text).width,
+          px: fm ? +fm[1] : 16, weight: wm ? +wm[1] : 400,
+          align: ctx.textAlign, baseline: ctx.textBaseline,
+          color: String(ctx.fillStyle),
+        });
+      }
+      if (SUPPRESS && SUPPRESS.text) return;
+      ctx.__origFillText(text, x, y);
+    };
+  }
+  ctx.__lookup = buildNudgeLookup(state);
+
   ctx.clearRect(0, 0, size.w, size.h);
   if (Math.min(size.w, size.h) <= 300) {
     drawMicro(ctx, size.w, size.h, state, assets, opts);
@@ -1239,4 +1351,24 @@ function renderAd(canvas, size, templateId, state, assets, opts = {}) {
     (TEMPLATE_RENDERERS[templateId] || drawArrival)(ctx, size.w, size.h, state, assets, opts);
     drawOwaf(ctx, size.w, size.h, templateId, state, assets);
   }
+}
+
+/* Render once while recording every text/image/CTA element. */
+function renderAdLayers(size, templateId, state, assets) {
+  const c = document.createElement("canvas");
+  REC = [];
+  renderAd(c, size, templateId, state, assets, { hint: false });
+  const layers = REC;
+  REC = null;
+  return layers;
+}
+
+/* Render the flattened background only: photo, panels, washes, shapes —
+   no text, CTA, logos, OWAF, or vehicle overlay. */
+function renderAdBackground(size, templateId, state, assets) {
+  const c = document.createElement("canvas");
+  SUPPRESS = { text: 1, cta: 1, logo: 1, owaf: 1, overlay: 1 };
+  renderAd(c, size, templateId, state, assets, { hint: false });
+  SUPPRESS = null;
+  return c;
 }
