@@ -29,13 +29,10 @@ const OWAF_FILES = {
   red:   "assets/logos/owaf-single-red.png",
 };
 
-/* Which OWAF variant suits each template when set to Auto. */
-const OWAF_AUTO_VARIANT = {
-  arrival: "white", clearance: "white", driveaway: "white",
-  announce: "white", promo: "red", retail: "white", badge: "white",
-  event: "red", hero: "white", velocity: "white", poster: "red",
-  spotlight: "white",
-};
+/* Toyota Product vertical logo (white ink; the app tints it). Per the
+   masterbrand golden rules this is the only logo used in
+   communications, and it must never be duplicated in a layout. */
+const TOYOTA_LOGO_FILE = "assets/logos/toyota-vertical.png";
 
 const TOYOTA_MODELS = [
   { name: "Yaris",            grades: ["Ascent Sport", "SX", "ZR"] },
@@ -110,114 +107,59 @@ const BRAND_SWATCHES = [
    {MODEL} {GRADE} {COLOUR} {PRICE} {DEALER} — replaced at render time. */
 const TEMPLATES = [
   {
-    id: "arrival",
-    name: "Stock arrival — dark panel",
-    hint: "Big two-line headline on a black side panel (“HERE NOW” style).",
+    id: "fullbleed",
+    name: "Full-bleed image",
+    hint: "Masterbrand layout: headline over the photo, brand furniture at the base.",
     defaults: {
-      h1: "HERE", h2: "NOW",
-      sub1: "NEW {MODEL}", sub2: "STOCK HAS LANDED",
-      tagline: "New stock arriving daily",
-      cta: "Get quote",
-    },
-  },
-  {
-    id: "clearance",
-    name: "Clearance — stacked headline",
-    hint: "Model name, red CLEARANCE, ON NOW over the photo.",
-    defaults: {
-      h1: "{MODEL}", h2: "CLEARANCE", h3: "ON NOW",
-      cta: "Contact us",
-    },
-  },
-  {
-    id: "driveaway",
-    name: "Driveaway price",
-    hint: "Large price over the photo with a pill-outline sub-line.",
-    defaults: {
-      h1: "{PRICE}*", h2: "DRIVEAWAY",
-      pill: "DRIVEAWAY WITHOUT DELAY",
-      cta: "See details",
-    },
-  },
-  {
-    id: "announce",
-    name: "Announcement — photo + text block",
-    hint: "Photo on top, bold headline and CTA bar underneath.",
-    defaults: {
-      h1: "{MODEL} {GRADE} STOCK NOW ARRIVING",
-      sub1: "EXPLORE THE TOYOTA RANGE",
+      h1: "The all-new {MODEL}",
+      sub1: "Available for immediate delivery",
       cta: "Learn more",
     },
   },
   {
-    id: "promo",
-    name: "Seasonal promo",
-    hint: "Headline top (black + red line), photo centre, CTA button.",
+    id: "strip",
+    name: "Strip",
+    hint: "Masterbrand layout: a white, red or black strip on any edge carries the message.",
     defaults: {
-      h1: "THE LAST BLAST OF", h2: "WINTER DEALS",
-      cta: "Book a test drive!",
+      h1: "{MODEL} {GRADE}",
+      sub1: "In stock now",
+      offer: "From {PRICE}* driveaway",
+      cta: "Enquire now",
     },
+    options: [
+      { key: "stripEdge", label: "Strip edge", choices: ["bottom", "top", "left", "right"] },
+      { key: "stripColour", label: "Strip colour", choices: ["white", "red", "black"] },
+    ],
   },
   {
-    id: "retail",
-    name: "Retail stack — big model name",
-    hint: "Photo top, black + red stacked headline, From-price lockup and CTA on white.",
+    id: "colourbg",
+    name: "Colour background",
+    hint: "Masterbrand layout: solid white, black or red; vehicle cutout and a price roundel.",
     defaults: {
-      h1: "HEAVY HITTING", h2: "{MODEL}",
+      h1: "All-new {MODEL}",
+      sub1: "More space. More power. More adventure.",
+      badge1: "NOW FROM", badge2: "{PRICE}*", badge3: "DRIVEAWAY",
+      cta: "Book a test drive",
+    },
+    options: [
+      { key: "bgColour", label: "Background colour", choices: ["white", "black", "red"] },
+    ],
+  },
+  {
+    id: "offer",
+    name: "Retail offer",
+    hint: "White retail layout: price lockup, vehicle cutout, red base strip with sign-off and OWAF.",
+    defaults: {
+      h1: "{MODEL} {GRADE}",
+      sub1: "Ready for immediate delivery",
       tc: "*T&C's apply. Price relates to {MODEL} {GRADE}.",
       cta: "Get our stocklist",
     },
   },
   {
-    id: "badge",
-    name: "Price roundel — red circle",
-    hint: "Red price circle over the photo edge, In-Stock message on white.",
-    defaults: {
-      badge1: "NOW FROM", badge2: "{PRICE}*", badge3: "DRIVEAWAY",
-      h1: "HURRY IN FOR", h2: "{MODEL}", h3: "In Stock",
-      sub1: "Ready for immediate delivery", sub2: "at {DEALER}",
-      cta: "Get offer",
-    },
-  },
-  {
-    id: "event",
-    name: "Sale event — date banner",
-    hint: "White date card over the photo, offer value, red roundel, hashtag.",
-    defaults: {
-      month: "AUGUST", dates: "21st Friday, 22nd Saturday, 23rd Sunday",
-      h1: "READY | SET", h2: "TRADE",
-      offer: "$3,000*", offerLabel: "Trade-In Bonus",
-      badge1: "3 DAYS", badge2: "ONLY",
-      hashtag: "#LandABetterDeal",
-      tc: "*T&C's apply. See dealer for terms and conditions.",
-      cta: "Book now",
-    },
-  },
-  {
-    id: "velocity",
-    name: "Velocity slash — diagonal",
-    hint: "Full photo with layered diagonal slashes, headline riding the wedge.",
-    defaults: {
-      kicker: "New stock just landed",
-      h1: "{MODEL} {GRADE}", h2: "READY TO ROLL",
-      cta: "Enquire now",
-    },
-  },
-  {
-    id: "poster",
-    name: "Poster type — oversized name",
-    hint: "Giant cropped model name behind the vehicle, offer bar along the bottom.",
-    defaults: {
-      kicker: "The all-new",
-      giant: "{MODEL}",
-      bar: "From {PRICE}* driveaway",
-      cta: "Book a test drive",
-    },
-  },
-  {
     id: "spotlight",
-    name: "Spotlight — text behind vehicle",
-    hint: "Dark stage with a glow; model name in huge type behind the cutout.",
+    name: "Launch spotlight",
+    hint: "Black colour background with circle energy; model name in giant type behind the cutout.",
     defaults: {
       kicker: "The all-new",
       giant: "{MODEL}",
@@ -226,14 +168,17 @@ const TEMPLATES = [
     },
   },
   {
-    id: "hero",
-    name: "Full-photo hero — centred",
-    hint: "Full-bleed image, centred stacked headline with an accent word, footer CTA.",
+    id: "event",
+    name: "Sale event",
+    hint: "White retail layout with a date card and offer roundel (text-holder devices).",
     defaults: {
-      h1: "All-New", h2: "All-", h2accent: "Electric", h3: "{MODEL}",
-      sub1: "More space. More power. More adventure",
-      foot1: "In Stock Now", foot2: "at {DEALER}",
-      cta: "Learn More",
+      month: "August",
+      dates: "21st Friday, 22nd Saturday, 23rd Sunday",
+      h1: "READY | SET", h2: "TRADE",
+      offer: "$3,000*", offerLabel: "Trade-In Bonus",
+      badge1: "3 DAYS", badge2: "ONLY",
+      hashtag: "#LandABetterDeal",
+      cta: "Book now",
     },
   },
 ];

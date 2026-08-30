@@ -43,6 +43,7 @@ function loadOwafPack() {
   for (const [variant, src] of Object.entries(OWAF_FILES)) {
     loadImage(src, (img) => { assets.owafPack[variant] = img; scheduleRender(); });
   }
+  loadImage(TOYOTA_LOGO_FILE, (img) => { assets.toyotaLogo = img; scheduleRender(); });
 }
 const OTHER = "__other__";
 
@@ -63,9 +64,11 @@ function readState() {
     colour: pick("f-colour", "f-colour-other"),
     price: $("f-price").value.trim(),
     disclaimer: $("f-disclaimer").value.trim(),
-    accent: $("f-accent").value || BRAND.red,
+    dealerDetails: $("f-dealer-details").value.trim(),
+    branding: $("f-branding").value,
+    logoAlign: $("f-logo-align").value,
+    ctaStyle: $("f-cta-style").value,
     owafVariant: $("f-owaf-variant").value,
-    owafPos: $("f-owaf-pos").value,
     scrimMode: $("f-scrim-mode").value,
     scrim: (+$("f-scrim").value || 0) / 100,
     ovScale: (+$("f-ov-scale").value || 90) / 100,
@@ -228,6 +231,21 @@ function buildDynFields() {
     input.dataset.key = key;
     input.addEventListener("input", scheduleRender);
     row.appendChild(input);
+    wrap.appendChild(row);
+  }
+  for (const opt of t.options || []) {
+    const row = document.createElement("label");
+    row.className = "field";
+    row.innerHTML = `<span>${opt.label}</span>`;
+    const sel = document.createElement("select");
+    sel.dataset.key = opt.key;
+    for (const c of opt.choices) {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c.charAt(0).toUpperCase() + c.slice(1);
+      sel.appendChild(o);
+    }
+    sel.addEventListener("change", scheduleRender);
+    row.appendChild(sel);
     wrap.appendChild(row);
   }
   const note = document.createElement("p");
@@ -530,7 +548,7 @@ function startApp(userEmail) {
   wireOther("f-colour", "f-colour-other-wrap");
   wireSaveButtons();
 
-  ["f-price", "f-disclaimer", "f-accent",
+  ["f-price", "f-disclaimer", "f-accent", "f-dealer-details",
    "f-dealer-other", "f-model-other", "f-grade-other", "f-colour-other"].forEach((id) =>
     $(id).addEventListener("input", scheduleRender));
 
@@ -538,7 +556,8 @@ function startApp(userEmail) {
   wireFileInput("f-logo", (img) => { assets.logo = img; });
   wireFileInput("f-owaf", (img) => { assets.owaf = img; });
   wireFileInput("f-overlay", (img) => { assets.overlay = img; });
-  ["f-owaf-pos", "f-owaf-variant", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
+  ["f-branding", "f-logo-align", "f-cta-style",
+   "f-owaf-variant", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
     $(id).addEventListener("change", scheduleRender));
   ["f-scrim", "f-ov-scale"].forEach((id) =>
     $(id).addEventListener("input", scheduleRender));
