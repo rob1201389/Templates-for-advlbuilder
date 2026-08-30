@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Social Ad Builder — Dealer Templates</title>
+  <title>Chatswood &amp; Ryde Toyota Social Assets Helper</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -13,8 +13,8 @@
     <form id="login-form" class="login-card" autocomplete="on">
       <div class="login-brand">
         <span class="brand-dot"></span>
-        <h1>Social Ad Builder</h1>
-        <p>Dealer social &amp; display ad templates</p>
+        <h1>Social Assets Helper</h1>
+        <p>Chatswood &amp; Ryde Toyota — social and display ads</p>
       </div>
       <h2 id="login-title">Sign in</h2>
       <label class="field"><span>Email</span>
@@ -32,7 +32,7 @@
 
   <!-- ======= App ======= -->
   <header class="topbar">
-    <div class="topbar-brand"><span class="brand-dot"></span> Social Ad Builder</div>
+    <div class="topbar-brand"><span class="brand-dot"></span> Chatswood &amp; Ryde Toyota — Social Assets Helper</div>
     <div class="topbar-user">
       <span id="user-email"></span>
       <button id="logout-btn" class="btn small">Log out</button>
@@ -128,10 +128,19 @@
             </select>
           </span>
         </label>
-        <label class="field"><span>Dealer composite logo / Toyota product logo (transparent PNG from AdBuilder)</span>
+        <label class="field"><span>Dealer logo — the official Chatswood / Ryde / combined lockup loads automatically; upload here only to override</span>
           <input id="f-logo" type="file" accept="image/*">
         </label>
-        <label class="field"><span>OWAF tagline logo (official “OH WHAT A FEELING” file from AdBuilder — never typed out)</span>
+        <label class="field"><span>OWAF “OH WHAT A FEELING” tagline</span>
+          <select id="f-owaf-variant">
+            <option value="auto">Auto (per template)</option>
+            <option value="white">Stacked — white</option>
+            <option value="black">Stacked — black</option>
+            <option value="red">Single line — red</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label class="field"><span>Custom OWAF file (overrides built-in)</span>
           <input id="f-owaf" type="file" accept="image/*">
         </label>
         <label class="field"><span>OWAF placement</span>

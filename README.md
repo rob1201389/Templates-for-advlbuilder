@@ -1,4 +1,4 @@
-# Social Ad Builder — Toyota Dealer Templates
+# Chatswood & Ryde Toyota Social Assets Helper
 
 A standalone, browser-based app for producing dealer social-media and display
 ads from reusable templates. No build step, no server required — open
@@ -18,6 +18,11 @@ ads from reusable templates. No build step, no server required — open
 - **Dealership picker** — Chatswood Toyota, Ryde Toyota, or the combined
   "Chatswood & Ryde Toyota", plus Other… for ad-hoc names (savable to
   your list). Edit the base list in `DEALERSHIPS` in `js/data.js`.
+- **Official artwork built in** (`assets/logos/`) — the dealer composite
+  lockups load automatically for the selected dealership and are tinted
+  to suit each template; the official OWAF "OH WHAT A FEELING" files
+  (stacked white/black, single-line red) are placed automatically with
+  an Auto-per-template variant picker.
 - **Customisable fields** — model, grade, colour, price,
   headlines, sub-lines, tagline, CTA, disclaimer, accent colour.
   Copy fields support tokens `{MODEL} {GRADE} {COLOUR} {PRICE} {DEALER}`.

@@ -156,8 +156,37 @@ function drawOverlayImg(ctx, x, y, w, h) {
   return { x: dx, y: dy, w: dw, h: dh };
 }
 
-/* Dealer identity block: logo image (if any) + dealer name. */
+/* Tint a monochrome-ink transparent image to a solid colour. */
+const TINT_CACHE = new WeakMap();
+function tinted(img, colour) {
+  let m = TINT_CACHE.get(img);
+  if (!m) { m = new Map(); TINT_CACHE.set(img, m); }
+  let c = m.get(colour);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const x = c.getContext("2d");
+    x.drawImage(img, 0, 0);
+    x.globalCompositeOperation = "source-in";
+    x.fillStyle = colour;
+    x.fillRect(0, 0, c.width, c.height);
+    m.set(colour, c);
+  }
+  return c;
+}
+
+/* Dealer identity block: built-in composite lockup (tinted to suit the
+   template), a custom uploaded logo + name, or the name as text. */
 function drawDealerMark(ctx, s, assets, x, y, maxW, px, colour, align = "left") {
+  if (!assets.logo && assets.logoPack && assets.logoPack.h) {
+    const img = tinted(assets.logoPack.h, colour);
+    let h = px * 2.7;
+    let w = img.width * (h / img.height);
+    if (w > maxW) { w = maxW; h = img.height * (w / img.width); }
+    const lx = align === "right" ? x + maxW - w : x;
+    ctx.drawImage(img, lx, y - h / 2, w, h);
+    return;
+  }
   ctx.save();
   ctx.textBaseline = "middle";
   let cursor = x;
@@ -1160,13 +1189,21 @@ const OWAF_AUTO_POS = {
 };
 
 function drawOwaf(ctx, W, H, templateId, s, assets) {
-  const img = assets.owaf;
+  let img = assets.owaf; // custom upload always wins
+  if (!img) {
+    const variant = !s.owafVariant || s.owafVariant === "auto"
+      ? OWAF_AUTO_VARIANT[templateId] || "white"
+      : s.owafVariant;
+    if (variant === "off") return;
+    img = assets.owafPack && assets.owafPack[variant];
+  }
   if (!img) return;
   let pos = s.owafPos && s.owafPos !== "auto" ? s.owafPos : OWAF_AUTO_POS[templateId] || "bottom-right";
   // portrait arrival: bottom is the text panel, keep the tagline on the photo
   if (templateId === "arrival" && H / W > 1.3 && (!s.owafPos || s.owafPos === "auto")) pos = "top-right";
 
-  const w = Math.min(W * 0.24, 460);
+  const wide = img.width / img.height > 5; // single-line lock-up
+  const w = wide ? Math.min(W * 0.34, 640) : Math.min(W * 0.2, 400);
   const h = w * (img.height / img.width);
   const mx = W * 0.045;
   const myTop = H * 0.045, myBot = H * 0.045 + (s.disclaimer ? H * 0.035 : 0);

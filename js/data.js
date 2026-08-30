@@ -13,6 +13,30 @@ const DEALERSHIPS = [
   "Chatswood & Ryde Toyota",
 ];
 
+/* Official dealer composite lockups (white ink on transparency,
+   composed from AdBuilder artwork). The app tints them to suit each
+   template, so one file serves dark and light layouts. */
+const DEALER_LOGOS = {
+  "Chatswood Toyota":        { h: "assets/logos/chatswood-h.png" },
+  "Ryde Toyota":             { h: "assets/logos/ryde-h.png" },
+  "Chatswood & Ryde Toyota": { h: "assets/logos/combined-h.png" },
+};
+
+/* Official OWAF tagline files (never typed out, per masterbrand). */
+const OWAF_FILES = {
+  white: "assets/logos/owaf-stacked-white.png",
+  black: "assets/logos/owaf-stacked-black.png",
+  red:   "assets/logos/owaf-single-red.png",
+};
+
+/* Which OWAF variant suits each template when set to Auto. */
+const OWAF_AUTO_VARIANT = {
+  arrival: "white", clearance: "white", driveaway: "white",
+  announce: "white", promo: "red", retail: "white", badge: "white",
+  event: "red", hero: "white", velocity: "white", poster: "red",
+  spotlight: "white",
+};
+
 const TOYOTA_MODELS = [
   { name: "Yaris",            grades: ["Ascent Sport", "SX", "ZR"] },
   { name: "Yaris Cross",      grades: ["GX", "GXL", "Urban"] },

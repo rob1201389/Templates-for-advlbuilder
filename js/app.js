@@ -12,7 +12,38 @@ function loadCustom() {
 }
 function saveCustom(c) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); }
 
-const assets = { bg: null, logo: null, owaf: null, overlay: null };
+const assets = {
+  bg: null, logo: null, owaf: null, overlay: null,
+  logoPack: null,   // built-in dealer lockup for the selected dealership
+  owafPack: {},     // built-in OWAF tagline variants
+};
+
+function loadImage(src, cb) {
+  const img = new Image();
+  img.onload = () => cb(img);
+  img.src = src;
+}
+
+const dealerLogoCache = {};
+function loadDealerLogos() {
+  const dealer = pickDealer();
+  const spec = DEALER_LOGOS[dealer];
+  if (!spec) { assets.logoPack = null; scheduleRender(); return; }
+  if (dealerLogoCache[dealer]) {
+    assets.logoPack = dealerLogoCache[dealer]; scheduleRender(); return;
+  }
+  loadImage(spec.h, (img) => {
+    dealerLogoCache[dealer] = { h: img };
+    assets.logoPack = dealerLogoCache[dealer];
+    scheduleRender();
+  });
+}
+
+function loadOwafPack() {
+  for (const [variant, src] of Object.entries(OWAF_FILES)) {
+    loadImage(src, (img) => { assets.owafPack[variant] = img; scheduleRender(); });
+  }
+}
 const OTHER = "__other__";
 
 const $ = (id) => document.getElementById(id);
@@ -33,6 +64,7 @@ function readState() {
     price: $("f-price").value.trim(),
     disclaimer: $("f-disclaimer").value.trim(),
     accent: $("f-accent").value || BRAND.red,
+    owafVariant: $("f-owaf-variant").value,
     owafPos: $("f-owaf-pos").value,
     scrimMode: $("f-scrim-mode").value,
     scrim: (+$("f-scrim").value || 0) / 100,
@@ -84,6 +116,7 @@ function wireOther(selId, otherWrapId) {
   $(selId).addEventListener("change", () => {
     $(otherWrapId).hidden = $(selId).value !== OTHER;
     if (selId === "f-model") refreshGrades();
+    if (selId === "f-dealer") loadDealerLogos();
     scheduleRender();
   });
 }
@@ -110,6 +143,7 @@ function wireSaveButtons() {
     fillSelect($("f-dealer"), allDealers(), false);
     $("f-dealer").value = v;
     $("f-dealer-other-wrap").hidden = true;
+    loadDealerLogos();
     scheduleRender();
   });
   $("save-model").addEventListener("click", () => {
@@ -351,7 +385,7 @@ function startApp(userEmail) {
   wireFileInput("f-logo", (img) => { assets.logo = img; });
   wireFileInput("f-owaf", (img) => { assets.owaf = img; });
   wireFileInput("f-overlay", (img) => { assets.overlay = img; });
-  ["f-owaf-pos", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
+  ["f-owaf-pos", "f-owaf-variant", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
     $(id).addEventListener("change", scheduleRender));
   ["f-scrim", "f-ov-scale"].forEach((id) =>
     $(id).addEventListener("input", scheduleRender));
@@ -371,6 +405,8 @@ function startApp(userEmail) {
 
   $("download-all").addEventListener("click", downloadAll);
 
+  loadDealerLogos();
+  loadOwafPack();
   renderAll();
 }
 
