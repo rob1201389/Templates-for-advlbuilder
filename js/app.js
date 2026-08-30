@@ -12,7 +12,7 @@ function loadCustom() {
 }
 function saveCustom(c) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); }
 
-const assets = { bg: null, logo: null, owaf: null };
+const assets = { bg: null, logo: null, owaf: null, overlay: null };
 const OTHER = "__other__";
 
 const $ = (id) => document.getElementById(id);
@@ -34,6 +34,10 @@ function readState() {
     disclaimer: $("f-disclaimer").value.trim(),
     accent: $("f-accent").value || BRAND.red,
     owafPos: $("f-owaf-pos").value,
+    scrimMode: $("f-scrim-mode").value,
+    scrim: (+$("f-scrim").value || 0) / 100,
+    ovScale: (+$("f-ov-scale").value || 90) / 100,
+    ovPos: $("f-ov-pos").value,
   };
   document.querySelectorAll("#dyn-fields [data-key]").forEach((el) => {
     s[el.dataset.key] = el.value;
@@ -157,6 +161,7 @@ const FIELD_LABELS = {
   month: "Event month", dates: "Event dates (comma separated)",
   offer: "Offer value", offerLabel: "Offer label",
   foot1: "Footer line 1", foot2: "Footer line 2",
+  kicker: "Kicker line", giant: "Giant display word", bar: "Offer bar text",
 };
 
 function buildTemplatePicker() {
@@ -345,7 +350,11 @@ function startApp(userEmail) {
   wireFileInput("f-bg", (img) => { assets.bg = img; });
   wireFileInput("f-logo", (img) => { assets.logo = img; });
   wireFileInput("f-owaf", (img) => { assets.owaf = img; });
-  $("f-owaf-pos").addEventListener("change", scheduleRender);
+  wireFileInput("f-overlay", (img) => { assets.overlay = img; });
+  ["f-owaf-pos", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
+    $(id).addEventListener("change", scheduleRender));
+  ["f-scrim", "f-ov-scale"].forEach((id) =>
+    $(id).addEventListener("input", scheduleRender));
   wireFontInput();
 
   // masterbrand accent swatches

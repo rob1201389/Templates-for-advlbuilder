@@ -116,6 +116,10 @@ function drawPlaceholderBg(ctx, W, H, hint) {
   }
 }
 
+/* Current render pass (set by renderAd) so deep helpers can read the
+   layer controls without threading state through every call. */
+let CUR = null, CUR_ASSETS = { bg: null, logo: null, owaf: null, overlay: null };
+
 function drawBackground(ctx, W, H, assets, opts, fx = 0.5, fy = 0.5, x = 0, y = 0, w = null, h = null) {
   w = w == null ? W : w; h = h == null ? H : h;
   if (assets.bg) drawCover(ctx, assets.bg, x, y, w, h, fx, fy);
@@ -126,6 +130,30 @@ function drawBackground(ctx, W, H, assets, opts, fx = 0.5, fy = 0.5, x = 0, y = 
     drawPlaceholderBg(ctx, w, h, opts.hint);
     ctx.restore();
   }
+  // user-controlled wash over the background for text legibility
+  if (CUR && CUR.scrimMode && CUR.scrimMode !== "none" && CUR.scrim > 0) {
+    ctx.fillStyle = CUR.scrimMode === "light"
+      ? `rgba(255,255,255,${CUR.scrim})`
+      : `rgba(0,0,0,${CUR.scrim})`;
+    ctx.fillRect(x, y, w, h);
+  }
+}
+
+/* Vehicle cutout overlay: contain-fit into a region, bottom-anchored,
+   with user size (ovScale) and left/centre/right position (ovPos).
+   Returns the drawn rect, or null when no overlay is loaded. */
+function drawOverlayImg(ctx, x, y, w, h) {
+  const img = CUR_ASSETS.overlay;
+  if (!img) return null;
+  const scale = CUR && CUR.ovScale ? CUR.ovScale : 0.9;
+  const r = Math.min(w / img.width, h / img.height) * scale;
+  const dw = img.width * r, dh = img.height * r;
+  let dx = x + (w - dw) / 2;
+  if (CUR && CUR.ovPos === "left") dx = x + w * 0.02;
+  if (CUR && CUR.ovPos === "right") dx = x + w - dw - w * 0.02;
+  const dy = y + h - dh;
+  ctx.drawImage(img, dx, dy, dw, dh);
+  return { x: dx, y: dy, w: dw, h: dh };
 }
 
 /* Dealer identity block: logo image (if any) + dealer name. */
@@ -221,6 +249,7 @@ function drawArrival(ctx, W, H, s, assets, opts) {
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(8,8,10,0.94)"; ctx.fill();
     ctx.restore();
+    drawOverlayImg(ctx, 0, H * 0.2, W * 0.66, H * 0.72);
 
     const tx = Math.max(W * 0.62, W - r * 0.9);
     const colW = W - tx - W * 0.05;
@@ -273,6 +302,7 @@ function drawArrival(ctx, W, H, s, assets, opts) {
     ctx.rect(0, panelTop + R, W, H - panelTop);
     ctx.fillStyle = "rgba(8,8,10,0.96)"; ctx.fill();
     ctx.restore();
+    drawOverlayImg(ctx, 0, H * 0.1, W, H * 0.44);
 
     const cxT = W / 2, colW = W * 0.86;
     drawDealerMark(ctx, s, assets, W * 0.07, H * 0.06, W * 0.86, W * 0.035, "#fff");
@@ -320,6 +350,7 @@ function drawClearance(ctx, W, H, s, assets, opts) {
   g.addColorStop(0, "rgba(255,255,255,0.55)");
   g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 0.55);
+  drawOverlayImg(ctx, 0, H * 0.38, W, H * 0.56);
 
   const pad = W * 0.06;
   drawDealerMark(ctx, s, assets, pad, H * 0.08, W - pad * 2, Math.min(W, H) * 0.032, "#111", "right");
@@ -371,6 +402,7 @@ function drawDriveaway(ctx, W, H, s, assets, opts) {
   g.addColorStop(0, "rgba(0,0,0,0.55)");
   g.addColorStop(1, "rgba(0,0,0,0.05)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  drawOverlayImg(ctx, W * 0.28, H * 0.32, W * 0.7, H * 0.58);
 
   const pad = W * 0.07;
   drawDealerMark(ctx, s, assets, pad, H * 0.08, W - pad * 2, Math.min(W, H) * 0.032, "#fff");
@@ -428,6 +460,7 @@ function drawAnnounce(ctx, W, H, s, assets, opts) {
   if (!landscape) {
     const photoH = H * 0.56;
     drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, W, photoH);
+    drawOverlayImg(ctx, 0, 0, W, photoH + H * 0.04);
     drawDealerMark(ctx, s, assets, W * 0.05, H * 0.05, W * 0.9, Math.min(W, H) * 0.03, "#fff");
 
     const pad = W * 0.06;
@@ -462,6 +495,7 @@ function drawAnnounce(ctx, W, H, s, assets, opts) {
   } else {
     const photoW = W * 0.58;
     drawBackground(ctx, W, H, assets, opts, 0.5, 0.45, 0, 0, photoW, H);
+    drawOverlayImg(ctx, 0, H * 0.15, photoW, H * 0.75);
     drawDealerMark(ctx, s, assets, W * 0.03, H * 0.09, photoW * 0.9, Math.min(W, H) * 0.045, "#fff");
 
     const pad = W * 0.04;
@@ -514,7 +548,8 @@ function drawPromo(ctx, W, H, s, assets, opts) {
   // photo band
   const bandY = y + H * 0.02;
   const bandH = H * 0.78 - bandY;
-  if (assets.bg) drawContain(ctx, assets.bg, W * 0.05, bandY, W * 0.9, bandH);
+  if (assets.overlay) drawOverlayImg(ctx, W * 0.05, bandY, W * 0.9, bandH);
+  else if (assets.bg) drawContain(ctx, assets.bg, W * 0.05, bandY, W * 0.9, bandH);
   else {
     ctx.save(); ctx.globalAlpha = 0.35;
     roundRectPath(ctx, W * 0.08, bandY, W * 0.84, bandH, W * 0.02);
@@ -545,7 +580,8 @@ function drawMicro(ctx, W, H, s, assets, opts) {
   const leaderboard = W / H > 3;
   ctx.fillStyle = BRAND.charcoal; ctx.fillRect(0, 0, W, H);
 
-  const h1 = (tok(s.h1, s) + " " + tok(s.h2, s)).trim() || "NEW STOCK HAS LANDED";
+  const h1 = (tok(s.h1, s) + " " + tok(s.h2, s)).trim()
+    || (tok(s.giant, s) || "").toUpperCase() || "NEW STOCK HAS LANDED";
   const cta = tok(s.cta, s) || "Learn more";
 
   if (leaderboard) {
@@ -610,6 +646,7 @@ function drawRetail(ctx, W, H, s, assets, opts) {
   const photoW = landscape ? W * 0.52 : W;
   const photoH = landscape ? H : H * (portrait ? 0.4 : 0.44);
   drawBackground(ctx, W, H, assets, opts, 0.5, 0.35, 0, 0, photoW, photoH);
+  drawOverlayImg(ctx, 0, 0, photoW, landscape ? H * 0.85 : photoH + H * 0.04);
   drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
 
   const pad = landscape ? photoW + W * 0.045 : W * 0.07;
@@ -665,6 +702,7 @@ function drawBadgeTpl(ctx, W, H, s, assets, opts) {
   const photoW = landscape ? W * 0.52 : W;
   const photoH = landscape ? H : H * (portrait ? 0.38 : 0.42);
   drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, photoW, photoH);
+  drawOverlayImg(ctx, 0, 0, photoW, landscape ? H * 0.85 : photoH + H * 0.04);
   drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, photoW * 0.9, U * 0.03, "#fff");
 
   // red roundel straddling the photo edge
@@ -732,6 +770,7 @@ function drawEvent(ctx, W, H, s, assets, opts) {
   const photoW = landscape ? W * 0.5 : W;
   const photoH = landscape ? H : H * (portrait ? 0.36 : 0.4);
   drawBackground(ctx, W, H, assets, opts, 0.5, 0.5, 0, 0, photoW, photoH);
+  drawOverlayImg(ctx, 0, 0, photoW, landscape ? H * 0.85 : photoH + H * 0.04);
 
   // white date card with red header
   const month = tok(s.month, s);
@@ -845,6 +884,7 @@ function drawHero(ctx, W, H, s, assets, opts) {
   g = ctx.createLinearGradient(0, H * 0.65, 0, H);
   g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.6)");
   ctx.fillStyle = g; ctx.fillRect(0, H * 0.65, W, H * 0.35);
+  drawOverlayImg(ctx, 0, H * 0.32, W, H * 0.42);
 
   drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "#fff");
 
@@ -902,6 +942,211 @@ function drawHero(ctx, W, H, s, assets, opts) {
   drawDisclaimer(ctx, s, W, H, "#fff", W * 0.04);
 }
 
+/* 10. Velocity slash — layered diagonal wedges over a full photo. */
+function drawVelocity(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  const portrait = H / W > 1.3, landscape = W / H > 1.4;
+  drawBackground(ctx, W, H, assets, opts, 0.5, 0.4);
+  drawOverlayImg(ctx, 0, H * 0.14, W, H * (portrait ? 0.5 : 0.46));
+
+  // diagonal geometry: left edge higher, dropping to the right
+  const drop = W * (landscape ? 0.07 : 0.11);
+  const t1 = H * (portrait ? 0.68 : landscape ? 0.56 : 0.62);
+
+  // floating accent stripe above the wedge
+  const g0 = U * 0.022, th = U * 0.035;
+  ctx.beginPath();
+  ctx.moveTo(0, t1 - g0 - th);
+  ctx.lineTo(W, t1 + drop - g0 - th);
+  ctx.lineTo(W, t1 + drop - g0);
+  ctx.lineTo(0, t1 - g0);
+  ctx.closePath();
+  ctx.fillStyle = s.accent; ctx.fill();
+
+  // charcoal wedge carrying the copy
+  ctx.beginPath();
+  ctx.moveTo(0, t1);
+  ctx.lineTo(W, t1 + drop);
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(16,16,18,0.96)"; ctx.fill();
+
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.03, "#fff");
+
+  const pad = W * 0.06;
+  const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), h2 = tok(s.h2, s), cta = tok(s.cta, s);
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  let y = t1 + U * 0.085;
+  if (kicker) {
+    const pk = fitText(ctx, kicker, W * 0.6, U * 0.028, 700);
+    ctx.font = F(pk, 700); ctx.fillStyle = s.accent;
+    ctx.fillText(kicker.toUpperCase(), pad, y);
+    y += pk * 0.6;
+  }
+  const p1 = fitText(ctx, h1, W * 0.88, U * 0.075, 900);
+  ctx.font = F(p1, 900); ctx.fillStyle = "#fff";
+  y += p1 * 1.2; ctx.fillText(h1, pad, y);
+  if (h2) {
+    const p2 = fitText(ctx, h2, W * 0.7, U * 0.045, 900);
+    ctx.font = F(p2, 900); ctx.fillStyle = s.accent;
+    y += p2 * 1.6; ctx.fillText(h2, pad, y);
+  }
+  if (s.price) {
+    const pp = fitText(ctx, s.price + "*", W * 0.3, U * 0.055, 900);
+    ctx.font = F(pp, 900); ctx.fillStyle = "#fff"; ctx.textAlign = "right";
+    ctx.fillText(s.price + "*", W - pad, t1 + drop * 0.8 + U * 0.1);
+    ctx.font = F(pp * 0.34, 600);
+    ctx.fillText("driveaway", W - pad, t1 + drop * 0.8 + U * 0.1 + pp * 0.5);
+    ctx.textAlign = "left";
+  }
+  drawCtaButton(ctx, cta, W - pad - U * 0.13, H - U * (s.disclaimer ? 0.1 : 0.065),
+    U * 0.026, s.accent, "#fff", U * 0.24);
+  drawDisclaimer(ctx, s, W, H, "#bbb", pad * 0.7);
+}
+
+/* 11. Poster type — oversized model name cropped off the edges. */
+function drawPoster(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  if (assets.bg) drawBackground(ctx, W, H, assets, opts && { hint: false });
+  else { ctx.fillStyle = BRAND.webGrey; ctx.fillRect(0, 0, W, H); }
+
+  const giant = (tok(s.giant, s) || "").toUpperCase();
+  const kicker = tok(s.kicker, s), bar = tok(s.bar, s), cta = tok(s.cta, s);
+  const barH = H * 0.115;
+
+  // giant display word, deliberately wider than the canvas
+  if (giant) {
+    ctx.font = F(100, 900);
+    const w100 = ctx.measureText(giant).width || 1;
+    const px = Math.min((W * 1.18 / w100) * 100, H * 0.44);
+    ctx.font = F(px, 900);
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = assets.bg ? "rgba(255,255,255,0.85)" : BRAND.steel;
+    ctx.fillText(giant, W / 2, H * 0.42);
+  }
+
+  drawOverlayImg(ctx, W * 0.04, H * 0.16, W * 0.92, H * 0.66 - barH / 2);
+
+  if (kicker) {
+    const pk = fitText(ctx, kicker, W * 0.5, U * 0.034, 800);
+    ctx.font = F(pk, 800); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = assets.bg ? "#fff" : "#111";
+    ctx.fillText(kicker.toUpperCase(), W * 0.055, H * 0.09);
+    ctx.fillStyle = s.accent;
+    ctx.fillRect(W * 0.055, H * 0.09 + pk * 0.5, pk * 2.4, pk * 0.16);
+  }
+  drawDealerMark(ctx, s, assets, W * 0.5, H * 0.075, W * 0.45,
+    U * 0.028, assets.bg ? "#fff" : "#111", "right");
+
+  // offer bar
+  const barY = H - barH;
+  ctx.fillStyle = s.accent; ctx.fillRect(0, barY, W, barH);
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  let ctaW = 0;
+  if (cta) {
+    let bp = barH * 0.22;
+    ctx.font = F(bp, 700);
+    ctaW = ctx.measureText(cta.toUpperCase()).width + bp * 2.4;
+    if (ctaW > W * 0.5) { // long CTA on a narrow canvas: shrink to fit
+      bp *= (W * 0.5) / ctaW; ctaW = W * 0.5;
+    }
+    drawCtaButton(ctx, cta.toUpperCase(), W - W * 0.045 - ctaW / 2,
+      barY + barH / 2, bp, "#fff", "#111");
+  }
+  if (bar) {
+    const pb = fitText(ctx, bar, W - ctaW - W * 0.16, barH * 0.34, 800);
+    ctx.font = F(pb, 800); ctx.fillStyle = "#fff"; ctx.textAlign = "left";
+    ctx.fillText(bar.toUpperCase(), W * 0.055, barY + barH / 2 + pb * 0.05);
+  }
+  ctx.textBaseline = "alphabetic";
+  // small print sits just above the bar
+  if (s.disclaimer) {
+    const tp = Math.max(9, U * 0.016);
+    ctx.font = F(tp, 500);
+    ctx.fillStyle = assets.bg ? "rgba(255,255,255,0.85)" : "#666";
+    ctx.textAlign = "left";
+    const lines = wrapText(ctx, s.disclaimer, W * 0.9);
+    let ty = barY - tp * 0.9 - (lines.length - 1) * tp * 1.3;
+    for (const ln of lines) { ctx.fillText(ln, W * 0.055, ty); ty += tp * 1.3; }
+  }
+}
+
+/* 12. Spotlight — model name in giant type BEHIND the vehicle cutout. */
+function drawSpotlight(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  // dark stage
+  ctx.fillStyle = "#121214"; ctx.fillRect(0, 0, W, H);
+  if (assets.bg) {
+    drawCover(ctx, assets.bg, 0, 0, W, H, 0.5, 0.5);
+    ctx.fillStyle = "rgba(10,10,12,0.78)"; ctx.fillRect(0, 0, W, H);
+  }
+  // accent glow + white core
+  let g = ctx.createRadialGradient(W / 2, H * 0.44, 0, W / 2, H * 0.44, U * 0.75);
+  g.addColorStop(0, hexToRgba(s.accent, 0.42));
+  g.addColorStop(0.55, hexToRgba(s.accent, 0.12));
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  g = ctx.createRadialGradient(W / 2, H * 0.42, 0, W / 2, H * 0.42, U * 0.35);
+  g.addColorStop(0, "rgba(255,255,255,0.14)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  drawDealerMark(ctx, s, assets, W * 0.045, H * 0.055, W * 0.9, U * 0.028, "#fff");
+
+  const kicker = tok(s.kicker, s), giant = (tok(s.giant, s) || "").toUpperCase();
+  const sub1 = tok(s.sub1, s), cta = tok(s.cta, s);
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+
+  if (kicker) {
+    const pk = fitText(ctx, kicker, W * 0.7, U * 0.03, 700);
+    ctx.font = F(pk, 700); ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText(kicker.toUpperCase(), W / 2, H * 0.16);
+  }
+  if (giant) {
+    const pg = fitText(ctx, giant, W * 0.94, H * 0.24, 900);
+    ctx.font = F(pg, 900); ctx.fillStyle = "#fff";
+    ctx.fillText(giant, W / 2, H * 0.52);
+  }
+  // floor shadow, then the cutout over the letters
+  const ovRegion = { x: W * 0.06, y: H * 0.3, w: W * 0.88, h: H * 0.46 };
+  if (CUR_ASSETS.overlay) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.beginPath();
+    ctx.ellipse(W / 2, ovRegion.y + ovRegion.h, W * 0.32 * (s.ovScale || 0.9),
+      U * 0.03, 0, 0, Math.PI * 2);
+    ctx.filter = `blur(${Math.max(2, U * 0.012)}px)`;
+    ctx.fill();
+    ctx.restore();
+  }
+  drawOverlayImg(ctx, ovRegion.x, ovRegion.y, ovRegion.w, ovRegion.h);
+
+  if (sub1) {
+    const ps = fitText(ctx, sub1, W * 0.84, U * 0.03, 700);
+    ctx.font = F(ps, 700); ctx.fillStyle = "#fff";
+    ctx.fillText(sub1.toUpperCase(), W / 2, H * 0.84);
+  }
+  let ctaY = H * 0.915 - (s.disclaimer ? H * 0.02 : 0);
+  if (s.price) {
+    const pp = fitText(ctx, s.price + "* driveaway", W * 0.5, U * 0.032, 800);
+    ctx.font = F(pp, 800); ctx.fillStyle = "#fff"; ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(s.price + "* driveaway", W / 2 - U * 0.02, ctaY);
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    drawCtaButton(ctx, cta, W / 2 + U * 0.14, ctaY, U * 0.026, s.accent, "#fff");
+  } else if (cta) {
+    drawCtaButton(ctx, cta, W / 2, ctaY, U * 0.028, s.accent, "#fff", W * 0.3);
+  }
+  drawDisclaimer(ctx, s, W, H, "rgba(255,255,255,0.8)", W * 0.04);
+}
+
+function hexToRgba(hex, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return `rgba(235,10,30,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 /* OWAF "OH WHAT A FEELING" tagline lock-up.
    Per masterbrand rules it must be placed as the official logo file
    (uploaded in the app), never typed out — so this only draws when the
@@ -910,7 +1155,8 @@ const OWAF_AUTO_POS = {
   arrival: "bottom-left", clearance: "bottom-right",
   driveaway: "bottom-right", announce: "top-right", promo: "top-right",
   retail: "top-right", badge: "top-right", event: "bottom-right",
-  hero: "bottom-left",
+  hero: "bottom-left", velocity: "top-right", poster: "top-left",
+  spotlight: "bottom-right",
 };
 
 function drawOwaf(ctx, W, H, templateId, s, assets) {
@@ -939,12 +1185,16 @@ const TEMPLATE_RENDERERS = {
   badge: drawBadgeTpl,
   event: drawEvent,
   hero: drawHero,
+  velocity: drawVelocity,
+  poster: drawPoster,
+  spotlight: drawSpotlight,
 };
 
 function renderAd(canvas, size, templateId, state, assets, opts = {}) {
   canvas.width = size.w;
   canvas.height = size.h;
   const ctx = canvas.getContext("2d");
+  CUR = state; CUR_ASSETS = assets;
   ctx.clearRect(0, 0, size.w, size.h);
   if (Math.min(size.w, size.h) <= 300) {
     drawMicro(ctx, size.w, size.h, state, assets, opts);

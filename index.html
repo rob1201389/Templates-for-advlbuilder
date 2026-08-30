@@ -102,8 +102,31 @@
             <span id="swatches" class="swatches"></span>
           </span>
         </label>
-        <label class="field"><span>Vehicle / background photo</span>
+        <label class="field"><span>Background photo (fills the photo area)</span>
           <input id="f-bg" type="file" accept="image/*">
+        </label>
+        <label class="field"><span>Background wash</span>
+          <span class="accent-row">
+            <select id="f-scrim-mode" style="width:auto">
+              <option value="none">None</option>
+              <option value="dark">Darken</option>
+              <option value="light">Lighten</option>
+            </select>
+            <input id="f-scrim" type="range" min="0" max="80" value="30">
+          </span>
+        </label>
+        <label class="field"><span>Vehicle cutout overlay (transparent PNG, sits on top)</span>
+          <input id="f-overlay" type="file" accept="image/*">
+        </label>
+        <label class="field"><span>Overlay size &amp; position</span>
+          <span class="accent-row">
+            <input id="f-ov-scale" type="range" min="40" max="130" value="90">
+            <select id="f-ov-pos" style="width:auto">
+              <option value="center">Centre</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </span>
         </label>
         <label class="field"><span>Dealer composite logo / Toyota product logo (transparent PNG from AdBuilder)</span>
           <input id="f-logo" type="file" accept="image/*">

@@ -170,6 +170,38 @@ const TEMPLATES = [
     },
   },
   {
+    id: "velocity",
+    name: "Velocity slash — diagonal",
+    hint: "Full photo with layered diagonal slashes, headline riding the wedge.",
+    defaults: {
+      kicker: "New stock just landed",
+      h1: "{MODEL} {GRADE}", h2: "READY TO ROLL",
+      cta: "Enquire now",
+    },
+  },
+  {
+    id: "poster",
+    name: "Poster type — oversized name",
+    hint: "Giant cropped model name behind the vehicle, offer bar along the bottom.",
+    defaults: {
+      kicker: "The all-new",
+      giant: "{MODEL}",
+      bar: "From {PRICE}* driveaway",
+      cta: "Book a test drive",
+    },
+  },
+  {
+    id: "spotlight",
+    name: "Spotlight — text behind vehicle",
+    hint: "Dark stage with a glow; model name in huge type behind the cutout.",
+    defaults: {
+      kicker: "The all-new",
+      giant: "{MODEL}",
+      sub1: "Available for immediate delivery",
+      cta: "Reserve yours",
+    },
+  },
+  {
     id: "hero",
     name: "Full-photo hero — centred",
     hint: "Full-bleed image, centred stacked headline with an accent word, footer CTA.",
