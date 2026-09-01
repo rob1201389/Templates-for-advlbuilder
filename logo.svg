@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 140" width="560" height="140" role="img" aria-label="RSMotoCons logo">
+  <defs>
+    <linearGradient id="rsGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff4d2e"/>
+      <stop offset="1" stop-color="#ff8a00"/>
+    </linearGradient>
+  </defs>
+  <!-- Gauge emblem -->
+  <g transform="translate(70,70)">
+    <circle r="56" fill="none" stroke="#1d2733" stroke-width="10"/>
+    <!-- gauge arc -->
+    <path d="M -48.5 24.25 A 54.2 54.2 0 1 1 48.5 24.25" fill="none" stroke="url(#rsGrad)" stroke-width="11" stroke-linecap="round"/>
+    <!-- tick marks -->
+    <g stroke="#8fa3b8" stroke-width="3" stroke-linecap="round">
+      <line x1="-38" y1="19" x2="-32" y2="16"/>
+      <line x1="-42" y1="-4" x2="-35" y2="-3"/>
+      <line x1="-30" y1="-30" x2="-25" y2="-25"/>
+      <line x1="0" y1="-43" x2="0" y2="-36"/>
+      <line x1="30" y1="-30" x2="25" y2="-25"/>
+      <line x1="42" y1="-4" x2="35" y2="-3"/>
+      <line x1="38" y1="19" x2="32" y2="16"/>
+    </g>
+    <!-- needle pointing high -->
+    <g>
+      <line x1="0" y1="0" x2="26" y2="-26" stroke="#ff4d2e" stroke-width="5" stroke-linecap="round"/>
+      <circle r="7" fill="#ff4d2e"/>
+      <circle r="3" fill="#0b1017"/>
+    </g>
+  </g>
+  <!-- Wordmark -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <text x="150" y="82" font-size="52" font-weight="800" letter-spacing="1" fill="#eef3f8">RS<tspan fill="#ff4d2e">Moto</tspan>Cons</text>
+    <text x="153" y="110" font-size="16" font-weight="600" letter-spacing="6" fill="#8fa3b8">DEALERSHIP OPERATIONS TOOLS</text>
+  </g>
+</svg>

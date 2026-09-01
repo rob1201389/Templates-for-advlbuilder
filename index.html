@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSMotoCons — Next-Gen Dealership Operations Tools</title>
+<meta name="description" content="RSMotoCons brings 20 years of automotive retail experience to the next generation of dealer management — inventory, marketing, sales, and finance tools built by someone who's lived the showroom floor.">
+<meta property="og:title" content="RSMotoCons — Next-Gen Dealership Operations Tools">
+<meta property="og:description" content="20 years of automotive experience brought to the next gen of dealer management. From inventory to marketing, sales to finance.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rsmotocons.com/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root{
+    --bg:#0b1017;
+    --bg-2:#101823;
+    --panel:#141e2b;
+    --panel-2:#182434;
+    --line:#233348;
+    --text:#eef3f8;
+    --muted:#8fa3b8;
+    --accent:#ff4d2e;
+    --accent-2:#ff8a00;
+    --grad:linear-gradient(120deg,#ff4d2e,#ff8a00);
+    --max:1120px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+
+  /* ===== Header ===== */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(11,16,23,.88);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.25rem;letter-spacing:.5px}
+  .brand img{height:40px;width:auto}
+  .brand .moto{color:var(--accent)}
+  nav.links{display:flex;gap:28px;align-items:center;font-size:.95rem;color:var(--muted)}
+  nav.links a:hover{color:var(--text)}
+  .btn{
+    display:inline-block;padding:12px 26px;border-radius:8px;
+    font-weight:700;font-size:.95rem;letter-spacing:.3px;
+    background:var(--grad);color:#fff;
+    box-shadow:0 4px 18px rgba(255,77,46,.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,77,46,.45)}
+  .btn.ghost{
+    background:transparent;border:1px solid var(--line);color:var(--text);box-shadow:none;
+  }
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .menu-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.6rem;cursor:pointer}
+
+  /* ===== Hero ===== */
+  .hero{
+    position:relative;overflow:hidden;
+    padding:110px 0 90px;
+    background:
+      radial-gradient(900px 400px at 85% -10%, rgba(255,77,46,.14), transparent 60%),
+      radial-gradient(700px 380px at -10% 110%, rgba(255,138,0,.08), transparent 60%),
+      var(--bg);
+  }
+  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+  .kicker{
+    display:inline-block;padding:6px 14px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel);
+    color:var(--accent-2);font-weight:700;font-size:.8rem;letter-spacing:2px;text-transform:uppercase;
+    margin-bottom:22px;
+  }
+  h1{font-size:clamp(2.2rem,4.6vw,3.4rem);line-height:1.12;font-weight:800;letter-spacing:-.5px}
+  h1 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{margin:22px 0 34px;color:var(--muted);font-size:1.15rem;max-width:34em}
+  .hero .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .hero-art{display:flex;justify-content:center}
+  .hero-art svg{width:100%;max-width:420px;height:auto;filter:drop-shadow(0 20px 40px rgba(0,0,0,.5))}
+
+  /* ===== Stats bar ===== */
+  .stats{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg-2)}
+  .stats .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;padding:0}
+  .stat{padding:34px 24px;text-align:center;border-left:1px solid var(--line)}
+  .stat:first-child{border-left:none}
+  .stat .num{font-size:2.1rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .lbl{color:var(--muted);font-size:.85rem;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
+
+  /* ===== Sections ===== */
+  section{padding:96px 0}
+  .sec-head{max-width:640px;margin-bottom:56px}
+  .sec-head .tag{color:var(--accent);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;font-size:.8rem}
+  .sec-head h2{font-size:clamp(1.7rem,3.2vw,2.4rem);font-weight:800;margin:10px 0 14px;letter-spacing:-.3px}
+  .sec-head p{color:var(--muted);font-size:1.05rem}
+
+  /* Tools grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:30px 26px;position:relative;overflow:hidden;
+    transition:transform .18s ease, border-color .18s ease;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(255,77,46,.55)}
+  .card::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:var(--grad);opacity:0;transition:opacity .18s ease;
+  }
+  .card:hover::before{opacity:1}
+  .card .ico{
+    width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,77,46,.12);margin-bottom:18px;
+  }
+  .card .ico svg{width:26px;height:26px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-size:1.15rem;font-weight:700;margin-bottom:10px}
+  .card p{color:var(--muted);font-size:.95rem}
+  .card ul{margin-top:14px;list-style:none}
+  .card ul li{color:var(--muted);font-size:.9rem;padding:4px 0 4px 22px;position:relative}
+  .card ul li::before{content:"›";position:absolute;left:6px;color:var(--accent);font-weight:800}
+
+  /* About */
+  .about{background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .about .wrap{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+  .about h2{font-size:clamp(1.7rem,3vw,2.3rem);font-weight:800;margin-bottom:18px;letter-spacing:-.3px}
+  .about p{color:var(--muted);margin-bottom:16px}
+  .about .points{margin-top:26px;display:grid;gap:14px}
+  .point{display:flex;gap:14px;align-items:flex-start}
+  .point .dot{
+    flex:none;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,77,46,.12);color:var(--accent);font-weight:800;
+  }
+  .point b{display:block;font-size:.98rem}
+  .point span{color:var(--muted);font-size:.9rem}
+  .timeline{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:36px 32px;
+  }
+  .timeline h3{font-size:1rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent-2);margin-bottom:22px}
+  .t-item{display:flex;gap:18px;padding:14px 0;border-top:1px solid var(--line)}
+  .t-item:first-of-type{border-top:none}
+  .t-item .yr{flex:none;font-weight:800;color:var(--accent);min-width:86px}
+  .t-item p{color:var(--muted);font-size:.92rem}
+
+  /* Why / edge */
+  .edge .grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+
+  /* Contact */
+  .contact{background:var(--bg-2);border-top:1px solid var(--line)}
+  .contact .wrap{display:grid;grid-template-columns:1fr 1fr;gap:64px}
+  .contact h2{font-size:clamp(1.7rem,3vw,2.3rem);font-weight:800;margin-bottom:14px}
+  .contact p{color:var(--muted);margin-bottom:22px}
+  form{display:grid;gap:14px}
+  label{font-size:.85rem;font-weight:600;color:var(--muted)}
+  input,textarea,select{
+    width:100%;padding:13px 15px;border-radius:8px;
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    font:inherit;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+  textarea{min-height:120px;resize:vertical}
+  .contact-info{display:grid;gap:18px;align-content:start}
+  .info-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 24px}
+  .info-card b{display:block;margin-bottom:4px}
+  .info-card span,.info-card a{color:var(--muted);font-size:.95rem}
+  .info-card a:hover{color:var(--accent)}
+
+  /* Footer */
+  footer{border-top:1px solid var(--line);padding:40px 0;background:var(--bg)}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  footer .fbrand{display:flex;align-items:center;gap:10px;font-weight:800}
+  footer .fbrand img{height:30px}
+  footer p{color:var(--muted);font-size:.85rem}
+
+  /* ===== Responsive ===== */
+  @media (max-width:900px){
+    .hero .wrap,.about .wrap,.contact .wrap{grid-template-columns:1fr}
+    .hero-art{order:-1}
+    .hero-art svg{max-width:300px}
+    .stats .wrap{grid-template-columns:repeat(2,1fr)}
+    .stat{border-left:none;border-top:1px solid var(--line)}
+    .stat:nth-child(-n+2){border-top:none}
+    nav.links{
+      display:none;position:absolute;top:72px;left:0;right:0;
+      flex-direction:column;background:var(--bg-2);padding:20px 24px;gap:18px;
+      border-bottom:1px solid var(--line);
+    }
+    nav.links.open{display:flex}
+    .menu-toggle{display:block}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="RSMotoCons home">
+      <img src="/favicon.svg" alt="" width="40" height="40">
+      <span>RS<span class="moto">Moto</span>Cons</span>
+    </a>
+    <button class="menu-toggle" aria-label="Toggle menu" onclick="document.querySelector('nav.links').classList.toggle('open')">☰</button>
+    <nav class="links">
+      <a href="#tools">Tools</a>
+      <a href="#about">About</a>
+      <a href="#edge">Why Us</a>
+      <a href="#contact" class="btn ghost" style="padding:10px 20px">Get in Touch</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="kicker">20 Years in the Business</span>
+        <h1>Dealership operations tools,<br>built for the <span class="grad">next generation</span> of dealer management.</h1>
+        <p class="lead">
+          Two decades on the automotive front lines — now packaged into modern tools
+          that run your store smarter. From inventory to marketing, sales to finance,
+          RSMotoCons covers the whole dealership, end to end.
+        </p>
+        <div class="cta-row">
+          <a class="btn" href="#contact">Book a Demo</a>
+          <a class="btn ghost" href="#tools">Explore the Tools</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="/logo.svg" alt="RSMotoCons — Dealership Operations Tools" style="max-width:440px;width:100%">
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <div class="stats">
+    <div class="wrap">
+      <div class="stat"><div class="num">20+</div><div class="lbl">Years in Automotive</div></div>
+      <div class="stat"><div class="num">4</div><div class="lbl">Departments Covered</div></div>
+      <div class="stat"><div class="num">1</div><div class="lbl">Unified Platform</div></div>
+      <div class="stat"><div class="num">100%</div><div class="lbl">Built by a Dealer</div></div>
+    </div>
+  </div>
+
+  <!-- ===== TOOLS ===== -->
+  <section id="tools">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="tag">The Platform</span>
+        <h2>Every department. One set of tools.</h2>
+        <p>Most dealer software was built by software people guessing at the car business. This was built the other way around — by someone who ran the departments first.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 7l2-4h14l2 4M3 7v13h18V7"/><path d="M8 11h8M8 15h5"/></svg></div>
+          <h3>Inventory</h3>
+          <p>Know what's on the lot, what it's worth, and when to move it — before it ages into a problem.</p>
+          <ul>
+            <li>Live lot &amp; aging visibility</li>
+            <li>Pricing &amp; turn insights</li>
+            <li>Appraisal-to-frontline workflow</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></div>
+          <h3>Marketing</h3>
+          <p>Merchandising and lead generation that actually reflects how buyers shop today.</p>
+          <ul>
+            <li>Listing &amp; merchandising tools</li>
+            <li>Lead source tracking</li>
+            <li>Campaign ROI clarity</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11l2 2 4-4"/></svg></div>
+          <h3>Sales</h3>
+          <p>A desk-to-delivery process your team will actually follow — with visibility for managers at every step.</p>
+          <ul>
+            <li>Pipeline &amp; desk log tools</li>
+            <li>Follow-up that doesn't fall through</li>
+            <li>Manager dashboards</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div>
+          <h3>Finance</h3>
+          <p>F&amp;I tooling that keeps deals compliant, funded fast, and profitable on the back end.</p>
+          <ul>
+            <li>Deal structuring support</li>
+            <li>Product &amp; menu presentation</li>
+            <li>Funding &amp; CIT tracking</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ABOUT ===== -->
+  <section class="about" id="about">
+    <div class="wrap">
+      <div>
+        <span class="tag" style="color:var(--accent);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;font-size:.8rem">The Story</span>
+        <h2>20 years on the showroom floor. Now in your toolbox.</h2>
+        <p>
+          RSMotoCons wasn't born in a tech incubator. It came out of two decades in
+          automotive retail — working deals, managing inventory, building marketing
+          that pulls traffic, and structuring finance that funds.
+        </p>
+        <p>
+          The next generation of dealer management shouldn't mean learning to think
+          like software. It should mean software that thinks like a dealer.
+        </p>
+        <div class="points">
+          <div class="point">
+            <div class="dot">✓</div>
+            <div><b>Operator-built</b><span>Every tool maps to a real process a real dealership runs daily.</span></div>
+          </div>
+          <div class="point">
+            <div class="dot">✓</div>
+            <div><b>Whole-store view</b><span>Inventory, marketing, sales, and finance talking to each other — not four silos.</span></div>
+          </div>
+          <div class="point">
+            <div class="dot">✓</div>
+            <div><b>Next-gen, not next-fad</b><span>Modern tech applied where it moves gross, not where it looks flashy.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="timeline">
+        <h3>The Road Here</h3>
+        <div class="t-item"><div class="yr">Years 1–5</div><p>Learning the business from the ground up — sales floor, follow-up, the grind that teaches what customers actually respond to.</p></div>
+        <div class="t-item"><div class="yr">Years 5–12</div><p>Running departments: inventory strategy, desking deals, building marketing that fills the lot with buyers.</p></div>
+        <div class="t-item"><div class="yr">Years 12–20</div><p>Managing operations end to end — and watching dealer software consistently fail the people using it.</p></div>
+        <div class="t-item"><div class="yr">Today</div><p>RSMotoCons: turning 20 years of hard-won process into tools built for the next generation of dealers.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== WHY ===== -->
+  <section class="edge" id="edge">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="tag">The Difference</span>
+        <h2>Why dealers work with RSMotoCons</h2>
+        <p>You don't need another vendor. You need a partner who has sat in your chair.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+          <h3>Speed to value</h3>
+          <p>No 18-month rollouts. Tools designed to plug into how your store already runs, so your team sees wins in weeks — not quarters.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-4z"/></svg></div>
+          <h3>Built on trust</h3>
+          <p>Straight talk from someone who has lived the pressure of a month-end close. No inflated promises, no black boxes.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></div>
+          <h3>Gross-first thinking</h3>
+          <p>Every feature is judged by one question: does it help the store sell more cars, hold more gross, or run leaner?</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CONTACT ===== -->
+  <section class="contact" id="contact">
+    <div class="wrap">
+      <div>
+        <h2>Let's talk about your store.</h2>
+        <p>Tell us a little about your dealership and what's slowing it down. We'll show you what the next generation of dealer management looks like.</p>
+        <form action="mailto:info@rsmotocons.com" method="post" enctype="text/plain">
+          <div>
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" placeholder="Your name" required>
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@dealership.com" required>
+          </div>
+          <div>
+            <label for="dept">Biggest pain point</label>
+            <select id="dept" name="department">
+              <option>Inventory</option>
+              <option>Marketing</option>
+              <option>Sales</option>
+              <option>Finance</option>
+              <option>All of the above</option>
+            </select>
+          </div>
+          <div>
+            <label for="msg">Message</label>
+            <textarea id="msg" name="message" placeholder="Tell us about your operation..."></textarea>
+          </div>
+          <button class="btn" type="submit" style="border:none;cursor:pointer;justify-self:start">Send Message</button>
+        </form>
+      </div>
+      <div class="contact-info">
+        <div class="info-card">
+          <b>Email</b>
+          <a href="mailto:info@rsmotocons.com">info@rsmotocons.com</a>
+        </div>
+        <div class="info-card">
+          <b>Web</b>
+          <span>rsmotocons.com</span>
+        </div>
+        <div class="info-card">
+          <b>What happens next</b>
+          <span>We reply within one business day, set up a short call, and map your store's biggest opportunity — no obligation, no pressure.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fbrand">
+      <img src="/favicon.svg" alt="">
+      <span>RS<span style="color:var(--accent)">Moto</span>Cons</span>
+    </div>
+    <p>© 2026 RSMotoCons · Dealership Operations Tools · 20 Years of Automotive Experience</p>
+  </div>
+</footer>
+
+</body>
+</html>
