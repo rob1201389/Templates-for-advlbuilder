@@ -5,6 +5,12 @@
    own entries in-app (saved to the browser via localStorage).
    ============================================================ */
 
+/* PORTAL_MODE: set to true when the app is hosted behind a real login
+   layer (e.g. Cloudflare Access, which verifies each user's email
+   before the page loads). The app then skips its own browser-stored
+   login screen, since the portal has already authenticated the user. */
+const PORTAL_MODE = false;
+
 /* Dealerships selectable in every template. "Other…" in the app lets
    users type and save additional names. */
 const DEALERSHIPS = [

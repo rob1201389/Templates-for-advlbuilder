@@ -69,6 +69,13 @@ function hasAnyUsers() {
 /* ---- Login screen wiring ---- */
 function initAuthUI(onReady) {
   const overlay = document.getElementById("login-overlay");
+  // Behind a portal (e.g. Cloudflare Access) the user is already
+  // authenticated by email before this page is served.
+  if (typeof PORTAL_MODE !== "undefined" && PORTAL_MODE) {
+    overlay.hidden = true;
+    onReady("Signed in via portal");
+    return;
+  }
   const form = document.getElementById("login-form");
   const emailEl = document.getElementById("login-email");
   const passEl = document.getElementById("login-password");
