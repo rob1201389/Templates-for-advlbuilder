@@ -522,6 +522,7 @@ const BRAND = {
 /* Quick-pick accent swatches shown next to the colour picker. */
 const BRAND_SWATCHES = [
   { name: "Toyota Red", hex: BRAND.red },
+  { name: "Toyota Blue (electrified/hybrid)", hex: "#00A0E9" },
   { name: "Black",      hex: BRAND.black },
   { name: "Charcoal",   hex: BRAND.charcoal },
   { name: "Slate",      hex: BRAND.slate },
@@ -564,6 +565,7 @@ const TEMPLATES = [
     hint: "Masterbrand layout: headline over the photo, brand furniture at the base.",
     defaults: {
       h1: "The all-new {MODEL}",
+      h2: "",
       sub1: "Available for immediate delivery",
       cta: "Learn more",
     },
@@ -574,6 +576,7 @@ const TEMPLATES = [
     hint: "Masterbrand layout: a white, red or black strip on any edge carries the message.",
     defaults: {
       h1: "{MODEL} {GRADE}",
+      h2: "",
       sub1: "In stock now",
       offer: "From {PRICE}* driveaway",
       cta: "Enquire now",
@@ -589,6 +592,7 @@ const TEMPLATES = [
     hint: "Masterbrand layout: solid white, black or red; vehicle cutout and a price roundel.",
     defaults: {
       h1: "All-new {MODEL}",
+      h2: "",
       sub1: "More space. More power. More adventure.",
       badge1: "NOW FROM", badge2: "{PRICE}*", badge3: "DRIVEAWAY",
       cta: "Book a test drive",
@@ -1380,6 +1384,13 @@ function drawFullBleed(ctx, W, H, s, assets, opts) {
   if (lines.length > 3) { p1 *= 0.82; ctx.font = F(p1, 800); lines = wrapText(ctx, h1, maxW); }
   ctx.fillStyle = ink;
   for (const ln of lines) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  // optional accent line (e.g. "PLUG-IN HYBRID" in Toyota Blue)
+  const h2 = tok(s.h2, s);
+  if (h2) {
+    ctx.font = F(p1, 800);
+    ctx.fillStyle = s.accent || BRAND.red;
+    for (const ln of wrapText(ctx, h2, maxW)) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  }
   if (sub1) {
     const ps = fitText(ctx, sub1, maxW, p1 * 0.34, 600);
     ctx.font = F(ps, 600); ctx.fillStyle = ink;
@@ -1452,7 +1463,7 @@ function drawStrip(ctx, W, H, s, assets, opts) {
 
   let y = logo.y + logo.h + m * 0.9;
   const avail = Math.max(sh * 0.22, furnitureTop - y);
-  const h1 = tok(s.h1, s), sub1 = tok(s.sub1, s), offer = tok(s.offer, s);
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), sub1 = tok(s.sub1, s), offer = tok(s.offer, s);
   ctx.textAlign = anchor.ta; ctx.textBaseline = "alphabetic";
   let p1 = Math.min(Math.min(sw, sh) * (vertical ? 0.1 : 0.13), avail * 0.3);
   ctx.font = F(p1, 800);
@@ -1460,6 +1471,11 @@ function drawStrip(ctx, W, H, s, assets, opts) {
   if (lines.length > 3) { p1 *= 0.8; ctx.font = F(p1, 800); lines = wrapText(ctx, h1, maxW); }
   ctx.fillStyle = ink;
   for (const ln of lines) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  if (h2) {
+    // accent line; white keeps legibility on a red strip
+    ctx.fillStyle = colour === "red" ? BRAND.white : (s.accent || accent);
+    for (const ln of wrapText(ctx, h2, maxW)) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  }
   if (sub1 && y + p1 * 0.8 < furnitureTop) {
     const ps = fitText(ctx, sub1, maxW, p1 * 0.36, 600);
     ctx.font = F(ps, 600); ctx.fillStyle = ink;
@@ -1534,7 +1550,7 @@ function drawColourBg(ctx, W, H, s, assets, opts) {
   const maxW = W - logo.margin * 2;
 
   let y = logo.y + logo.h + logo.margin * 1.4;
-  const h1 = tok(s.h1, s), sub1 = tok(s.sub1, s);
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), sub1 = tok(s.sub1, s);
   ctx.textAlign = anchor.ta; ctx.textBaseline = "alphabetic";
   let p1 = Math.min(W, H) * 0.09;
   ctx.font = F(p1, 800);
@@ -1542,6 +1558,10 @@ function drawColourBg(ctx, W, H, s, assets, opts) {
   if (lines.length > 2) { p1 *= 0.85; ctx.font = F(p1, 800); lines = wrapText(ctx, h1, maxW); }
   ctx.fillStyle = ink;
   for (const ln of lines) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  if (h2) {
+    ctx.fillStyle = bg === "red" ? BRAND.white : (s.accent || accent);
+    for (const ln of wrapText(ctx, h2, maxW)) { y += p1 * 1.05; ctx.fillText(ln, anchor.x, y); }
+  }
   if (sub1) {
     const ps = fitText(ctx, sub1, maxW, p1 * 0.33, 600);
     ctx.font = F(ps, 600); ctx.fillStyle = ink; ctx.globalAlpha = 0.85;
@@ -1799,7 +1819,7 @@ function drawEvent(ctx, W, H, s, assets, opts) {
   ctx.font = F(p1, 800); ctx.fillStyle = BRAND.black;
   y += p1; ctx.fillText(h1, pad, y);
   const p2 = fitText(ctx, h2, maxW * 0.85, U * 0.08, 800);
-  ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
+  ctx.font = F(p2, 800); ctx.fillStyle = s.accent || BRAND.red;
   y += p2 * 1.12; ctx.fillText(h2, pad, y);
 
   const offer = tok(s.offer, s), offerLabel = tok(s.offerLabel, s);
@@ -1874,7 +1894,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     }
     drawCtaButton(ctx, cta.toUpperCase(), margin + W * 0.24, H - margin - H * 0.055,
       H * 0.045, BRAND.red, BRAND.white, W * 0.42);
-    const owaf = CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
+    const owaf = s.owafVariant !== "off" && CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
     if (owaf) {
       const ow = W * 0.3, oh = ow * (owaf.height / owaf.width);
       putImage(ctx, "owaf", owaf, W - margin - ow, H - margin - oh - (oh > H * 0.09 ? 0 : H * 0.02), ow, oh);
@@ -1901,7 +1921,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
       putImage(ctx, "logo", tinted(logoImg, BRAND.black), W - margin - lw, (H - logoH) / 2, lw, logoH);
       rx = W - margin - lw - margin;
     }
-    const owaf = CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
+    const owaf = s.owafVariant !== "off" && CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
     if (owaf) {
       const oh = H * 0.2, ow = oh * (owaf.width / owaf.height);
       putImage(ctx, "owaf", owaf, rx - ow, (H - oh) / 2, ow, oh);
@@ -2217,6 +2237,7 @@ function readState() {
     disclaimer: $("f-disclaimer").value.trim(),
     dealerDetails: $("f-dealer-details").value.trim(),
     branding: $("f-branding").value,
+    accent: $("f-accent").value,
     logoAlign: $("f-logo-align").value,
     toyotaLogo: $("f-toyota-logo").value,
     dealerPos: $("f-dealer-pos").value,
@@ -2342,7 +2363,7 @@ function wireSaveButtons() {
 
 /* ---------- templates ---------- */
 const FIELD_LABELS = {
-  h1: "Headline line 1", h2: "Headline line 2", h3: "Headline line 3",
+  h1: "Headline line 1", h2: "Headline line 2 (accent colour)", h3: "Headline line 3",
   h2accent: "Accent word (headline line 2)",
   sub1: "Sub-line 1", sub2: "Sub-line 2", pill: "Pill text",
   tagline: "Tagline", cta: "Call to action",
