@@ -328,7 +328,7 @@ body, .btn, .field input, .field select, .field textarea, .other-row input {
             <option value="arrow">Text — sentence case + arrow</option>
           </select>
         </label>
-        <label class="field"><span>Accent colour (masterbrand palette)</span>
+        <label class="field"><span>Accent colour — Toyota Blue is for Electrified comms only: accent use, max one word per headline/subheadline, never price points, body copy or OWAF (13.4/13.7)</span>
           <span class="accent-row">
             <input id="f-accent" type="color" value="#EB0A1E">
             <span id="swatches" class="swatches"></span>
@@ -519,10 +519,16 @@ const BRAND = {
   white:     "#FFFFFF",
 };
 
-/* Quick-pick accent swatches shown next to the colour picker. */
+/* Quick-pick accent swatches shown next to the colour picker.
+   Toyota Blue per Masterbrand v8 §13.2 Electrified palette:
+   PMS 285C / RGB 36 104 255 / Hex 2468FF. Accent use only (§13.4):
+   max ONE Electrified word per headline or subheadline; never for
+   price points, body copy, dealer tagging or the OWAF tagline; never
+   on red, and never mixed with red in the same headline. Electrified
+   communications only (§13.7). */
 const BRAND_SWATCHES = [
   { name: "Toyota Red", hex: BRAND.red },
-  { name: "Toyota Blue (electrified/hybrid)", hex: "#00A0E9" },
+  { name: "Toyota Blue — Electrified only, PMS 285C (13.2)", hex: "#2468FF" },
   { name: "Black",      hex: BRAND.black },
   { name: "Charcoal",   hex: BRAND.charcoal },
   { name: "Slate",      hex: BRAND.slate },
