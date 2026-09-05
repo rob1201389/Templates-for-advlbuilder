@@ -625,6 +625,7 @@ const TEMPLATES = [
     defaults: {
       kicker: "The all-new",
       giant: "{MODEL}",
+      giant2: "",
       sub1: "Available for immediate delivery",
       cta: "Reserve yours",
     },
@@ -1056,7 +1057,7 @@ let CUR = null, CUR_ASSETS = {};
 const NUDGE_KEYS = ["h1", "h2", "h3", "sub1", "sub2", "kicker", "giant",
   "offer", "offerLabel", "hashtag", "month", "bar", "tc",
   "badge1", "badge2", "badge3",
-  "offerBig", "body1", "body2", "body3", "body4", "body5"];
+  "offerBig", "body1", "body2", "body3", "body4", "body5", "giant2"];
 
 function buildNudgeLookup(s) {
   const m = new Map();
@@ -1698,9 +1699,12 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
     ctx.fillStyle = "rgba(0,0,0,0.82)"; ctx.fillRect(0, 0, W, H);
   }
   const U = Math.min(W, H);
+  // the glow follows the accent colour, so an Electrified layout goes
+  // all-blue rather than mixing red and blue (13.7)
+  const accent = s.accent || BRAND.red;
   let g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, U * 0.7);
-  g.addColorStop(0, hexToRgba(BRAND.red, 0.28));
-  g.addColorStop(0.6, hexToRgba(BRAND.red, 0.07));
+  g.addColorStop(0, hexToRgba(accent, 0.28));
+  g.addColorStop(0.6, hexToRgba(accent, 0.07));
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   // circle-language particles
@@ -1734,10 +1738,16 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
     ctx.font = F(pk, 600); ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.fillText(kicker.toUpperCase(), W / 2, logo.y + logo.h + logo.margin * 1.6);
   }
+  const giant2 = (tok(s.giant2, s) || "").toUpperCase();
   if (giant) {
-    const pg = fitText(ctx, giant, W * 0.92, H * 0.2, 800);
+    const pg = fitText(ctx, giant, W * 0.92, giant2 ? H * 0.15 : H * 0.2, 800);
     ctx.font = F(pg, 800); ctx.fillStyle = BRAND.white;
-    ctx.fillText(giant, W / 2, H * 0.5);
+    ctx.fillText(giant, W / 2, giant2 ? H * 0.44 : H * 0.5);
+  }
+  if (giant2) {
+    const pg2 = fitText(ctx, giant2, W * 0.92, H * 0.13, 800);
+    ctx.font = F(pg2, 800); ctx.fillStyle = accent;
+    ctx.fillText(giant2, W / 2, (giant ? H * 0.44 : H * 0.35) + pg2 * 1.2);
   }
   const ovRegion = { x: W * 0.07, y: H * 0.3, w: W * 0.86, h: H * 0.42 };
   if (CUR_ASSETS.overlay) {
@@ -1751,10 +1761,10 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
   }
   drawOverlayImg(ctx, ovRegion.x, ovRegion.y, ovRegion.w, ovRegion.h);
   if (sub1) {
-    const ps = fitText(ctx, sub1, W * 0.84, U * 0.028, 600);
+    const ps = fitText(ctx, sub1, W * 0.7, U * 0.028, 600);
     ctx.font = F(ps, 600); ctx.fillStyle = BRAND.white;
     ctx.textAlign = "center";
-    ctx.fillText(sub1.toUpperCase(), W / 2, H * 0.79);
+    ctx.fillText(sub1.toUpperCase(), W / 2, H * 0.76);
   }
   const furnitureTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
   drawCta(ctx, s, tok(s.cta, s), W / 2, Math.min(H * 0.87, furnitureTop - logo.h * 0.35),
@@ -2379,6 +2389,7 @@ const FIELD_LABELS = {
   offer: "Offer value", offerLabel: "Offer label",
   foot1: "Footer line 1", foot2: "Footer line 2",
   kicker: "Kicker line", giant: "Giant display word", bar: "Offer bar text",
+  giant2: "Second display line (accent colour)",
   offerBig: "Offer headline (red)",
   body1: "Offer detail line 1", body2: "Offer detail line 2",
   body3: "Offer detail line 3", body4: "Offer detail line 4",
