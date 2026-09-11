@@ -563,7 +563,7 @@ const FIN_OFFER_WINDOW =
 const FIN_BALLOON =
   "Driveaway price of <$XX> (includes 12 months registration, 12 months compulsory third party insurance, dealer delivery and stamp duty), less a deposit of <XX% or $XX> with XX monthly payments in arrears not exceeding <$XX> with a final balloon payment of <$XX> (equal to the Guaranteed Future Value (GFV)). Additional interest charges accrue whenever a final balloon payment option is selected. Total amount payable is <$XX>. Based on an annual percentage rate of [x]%. ";
 
-const TEMPLATES = [
+const ALL_TEMPLATES = [
   {
     id: "fullbleed",
     group: "Masterbrand layouts",
@@ -831,6 +831,11 @@ const TEMPLATES = [
     disclaimer: "*Terms and conditions apply. This advice is general in nature and does not take into account your objectives, financial situation or needs. Before making a decision to purchase any of the insurance products you should consider the appropriateness of the advice taking into account your own objectives, financial situation and needs and refer to the current PDS and Target Market Determination for the relevant product available from participating Dealers, via our website at toyotainsurance.com.au or by calling 137 200. Toyota Comprehensive Motor Vehicle Insurance purchased in a dealership or via the Toyota Insurance National Customer Solutions Centre is facilitated by Toyota Finance Australia Limited ABN 48 002 435 181, AFSL and Australian Credit Licence 392536 as agent for, and on behalf of, the insurer. The insurer of Toyota Comprehensive Motor Vehicle Insurance is Aioi Nissay Dowa Insurance Company Australia Pty Ltd ABN 11 132 524 282, AFSL 443540 (Adica). If Toyota Comprehensive Motor Vehicle Insurance is purchased online, the issuer and insurer is Adica.",
   },
 ];
+
+/* Sales build: the general masterbrand layouts. The eleven Toyota
+   Finance campaign templates live in the separate Finance Assets
+   Helper (finance.html). */
+const TEMPLATES = ALL_TEMPLATES.filter((t) => !t.id.startsWith("fin-"));
 
 /* ============================================================
    Simple client-side login gate.
