@@ -204,14 +204,19 @@
       <div>
         <h2>Let's talk about your store.</h2>
         <p>Tell us a little about your dealership and what's slowing it down. We'll show you what the next generation of dealer management looks like.</p>
-        <form action="mailto:info@rsmotocons.com" method="post" enctype="text/plain">
+        <form id="contact-form" action="https://api.web3forms.com/submit" method="POST">
+          <input type="hidden" name="access_key" value="YOUR-WEB3FORMS-ACCESS-KEY">
+          <input type="hidden" name="subject" value="New enquiry from rsmotocons.com">
+          <input type="hidden" name="from_name" value="RSMotoCons Website">
+          <!-- Honeypot: hidden from humans; bots that fill it are dropped -->
+          <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" style="display:none" aria-hidden="true">
           <div>
             <label for="name">Name</label>
-            <input id="name" name="name" type="text" placeholder="Your name" required>
+            <input id="name" name="name" type="text" placeholder="Your name" required maxlength="120">
           </div>
           <div>
             <label for="email">Email</label>
-            <input id="email" name="email" type="email" placeholder="you@dealership.com" required>
+            <input id="email" name="email" type="email" placeholder="you@dealership.com" required maxlength="254">
           </div>
           <div>
             <label for="dept">Biggest pain point</label>
@@ -225,14 +230,15 @@
           </div>
           <div>
             <label for="msg">Message</label>
-            <textarea id="msg" name="message" placeholder="Tell us about your operation..."></textarea>
+            <textarea id="msg" name="message" placeholder="Tell us about your operation..." maxlength="4000"></textarea>
           </div>
           <div class="consent">
             <input id="optin" name="marketingOptIn" type="checkbox">
             <label for="optin">I'd like to receive occasional updates about RSMotoCons tools and services. (Optional — you can unsubscribe any time.)</label>
           </div>
-          <p class="form-note">By sending this form you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
+          <p class="form-note">By sending this form you agree to our <a href="/privacy.html">Privacy Policy</a>. Sent securely over HTTPS.</p>
           <button class="btn" type="submit" style="justify-self:start">Send Message</button>
+          <p id="form-status" role="status" aria-live="polite" hidden></p>
         </form>
       </div>
       <div class="contact-info">
