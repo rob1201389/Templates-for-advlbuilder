@@ -10,6 +10,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://rsmotocons.com/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="/app.js" defer></script>
 <style>
   :root{
     /* graphite */
@@ -236,7 +237,7 @@
       <img src="/favicon.svg" alt="" width="40" height="40">
       <span>RS<span class="moto">Moto</span>Cons</span>
     </a>
-    <button class="menu-toggle" aria-label="Toggle menu" onclick="document.querySelector('nav.links').classList.toggle('open')">☰</button>
+    <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
     <nav class="links">
       <a href="#tools">Tools</a>
       <a href="#about">About</a>
@@ -435,6 +436,11 @@
             <label for="msg">Message</label>
             <textarea id="msg" name="message" placeholder="Tell us about your operation..."></textarea>
           </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <input id="optin" name="marketingOptIn" type="checkbox" style="width:auto;margin-top:5px">
+            <label for="optin" style="font-weight:400">I'd like to receive occasional updates about RSMotoCons tools and services. (Optional — you can unsubscribe any time.)</label>
+          </div>
+          <p style="font-size:.82rem;color:var(--muted)">By sending this form you agree to our <a href="/privacy.html" style="color:var(--accent)">Privacy Policy</a>.</p>
           <button class="btn" type="submit" style="border:none;cursor:pointer;justify-self:start">Send Message</button>
         </form>
       </div>
@@ -465,6 +471,7 @@
       <span>RS<span style="color:var(--accent-2)">Moto</span>Cons</span>
     </div>
     <p><span class="flag" aria-hidden="true"></span>© 2026 RSMotoCons · Dealership Operations Tools · 20 Years of Automotive Experience</p>
+    <p><a href="/privacy.html" style="color:var(--muted-inv)">Privacy Policy</a> · <a href="/terms.html" style="color:var(--muted-inv)">Terms of Use</a></p>
   </div>
 </footer>
 

@@ -1,0 +1,319 @@
+// RSMotoCons Platform — Prisma schema
+// B2B2C multi-tenant dealership suite.
+//
+// Multi-tenancy rule (CLAUDE.md §1): every tenant-specific model carries a
+// required `tenantId` and is expected to be queried ONLY through the
+// tenant-scoped client in src/lib/tenant-db.ts. Compound unique constraints
+// are always scoped by tenantId so two dealerships can never collide.
+//
+// APP 11 (CLAUDE.md §2): driver's licence numbers are stored ONLY as
+// AES-256-GCM ciphertext (see src/lib/crypto.ts). Raw values must never be
+// written to any column.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN // platform operator; the only role that may cross tenants
+  DEALER_PRINCIPAL
+  SALES_MANAGER
+  SALES_REP
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+  CVT
+  DUAL_CLUTCH
+  OTHER
+}
+
+enum LeadSource {
+  CHATBOT
+  WEB_FORM
+  CARSALES
+  PHONE
+  WALK_IN
+  REFERRAL
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}
+
+enum TestDriveStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum DepositStatus {
+  PENDING   // checkout session created, awaiting payment
+  PAID      // webhook confirmed payment
+  REFUNDED
+  EXPIRED   // session expired / lock released
+}
+
+// ─────────────────────────────────────────────
+// Tenancy
+// ─────────────────────────────────────────────
+
+model Tenant {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique // storefront subdomain / path segment
+  abn             String?  // Australian Business Number
+  stripeAccountId String?  @unique // Stripe Connect account for deposits
+  // Inventory sync auth: SHA-256 hash of the tenant's API key (raw key is
+  // shown once at creation and never stored).
+  inventoryApiKeyHash String? @unique
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users      User[]
+  customers  Customer[]
+  vehicles   Vehicle[]
+  leads      Lead[]
+  testDrives TestDrive[]
+  auditLogs  AuditLog[]
+}
+
+// ─────────────────────────────────────────────
+// Staff / IAM
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String // argon2id / bcrypt only — never plaintext
+  firstName    String
+  lastName     String
+  role         Role     @default(SALES_REP)
+  active       Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedLeads  Lead[]         @relation("LeadAssignee")
+  leadActivities LeadActivity[]
+  testDrives     TestDrive[]    @relation("TestDriveStaff")
+  auditLogs      AuditLog[]
+
+  @@unique([tenantId, email]) // same email may exist at two dealerships, never twice in one
+  @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────
+// Consumers
+// ─────────────────────────────────────────────
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  // Spam Act 2003: marketing consent is opt-IN and defaults to false.
+  marketingOptIn   Boolean   @default(false)
+  marketingOptInAt DateTime? // proof of when consent was given
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads      Lead[]
+  testDrives TestDrive[]
+  deposits   Deposit[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, phone])
+}
+
+// ─────────────────────────────────────────────
+// Inventory
+// ─────────────────────────────────────────────
+
+model Vehicle {
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vin          String
+  rego         String?
+  stockNumber  String
+  make         String
+  model        String
+  year         Int
+  bodyType     String?
+  transmission Transmission?
+  odometerKm   Int?
+  // CLAUDE.md §4: monetary values are integer cents, AUD.
+  priceAudCents   Int
+  status          VehicleStatus @default(AVAILABLE)
+  // Optimistic hold while a deposit checkout is in flight: the vehicle is
+  // unavailable until lockedUntil passes or the webhook settles the deposit.
+  lockedUntil     DateTime?
+  feedSource      String? // third-party feed identifier when ingested via webhook
+  feedExternalId  String? // id of the record in that feed, for idempotent upserts
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads      Lead[]
+  testDrives TestDrive[]
+  deposits   Deposit[]
+
+  @@unique([tenantId, vin])
+  @@unique([tenantId, stockNumber])
+  @@unique([tenantId, feedSource, feedExternalId])
+  @@index([tenantId, status])
+  @@index([tenantId, make, model])
+}
+
+// ─────────────────────────────────────────────
+// Lead Management
+// ─────────────────────────────────────────────
+
+model Lead {
+  id         String     @id @default(cuid())
+  tenantId   String
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source     LeadSource
+  status     LeadStatus @default(NEW)
+  customerId String?
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleId  String?
+  vehicle    Vehicle?   @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?    @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  message    String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  activities LeadActivity[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, createdAt])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  tenantId  String
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String // e.g. "note", "call", "email", "status_change"
+  body      String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, leadId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Test Drives
+// ─────────────────────────────────────────────
+
+model TestDrive {
+  id         String          @id @default(cuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicleId  String
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  staffId    String?
+  staff      User?           @relation("TestDriveStaff", fields: [staffId], references: [id], onDelete: SetNull)
+  scheduledAt   DateTime
+  durationMins  Int             @default(30)
+  status        TestDriveStatus @default(SCHEDULED)
+  // APP 11: AES-256-GCM ciphertext only (src/lib/crypto.ts). Never plaintext.
+  driversLicenceEncrypted String?
+  // Digital ID capture: short-lived signed S3 URL is generated on demand;
+  // only the object key is persisted.
+  licenceImageS3Key String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One vehicle cannot be booked twice for the same slot (double-booking guard;
+  // overlapping-range checks are additionally enforced in application code).
+  @@unique([tenantId, vehicleId, scheduledAt])
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId, customerId])
+}
+
+// ─────────────────────────────────────────────
+// Vehicle reservation deposits (Stripe Connect)
+// ─────────────────────────────────────────────
+
+model Deposit {
+  id         String        @id @default(cuid())
+  tenantId   String
+  vehicleId  String
+  vehicle    Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // CLAUDE.md §4: integer cents, AUD. PCI-DSS: card data never touches us —
+  // only Stripe identifiers are stored.
+  amountAudCents          Int
+  status                  DepositStatus @default(PENDING)
+  stripeCheckoutSessionId String        @unique
+  stripePaymentIntentId   String?       @unique
+  invoiceNumber           String?       // sequential per tenant, set on payment
+  invoicePdfS3Key         String?       // generated tax invoice location
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, vehicleId])
+}
+
+// ─────────────────────────────────────────────
+// Audit (NDB scheme readiness) — append-only
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String // e.g. "customer.pii.view", "lead.export", "contract.generate"
+  targetType String // model name, e.g. "Customer"
+  targetId   String
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  // Immutability is enforced by the tenant-scoped client (updates/deletes on
+  // AuditLog are rejected) and should also be enforced with DB-level
+  // REVOKE UPDATE, DELETE in production.
+  @@index([tenantId, createdAt])
+  @@index([tenantId, targetType, targetId])
+}
