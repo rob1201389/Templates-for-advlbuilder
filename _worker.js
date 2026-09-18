@@ -32,12 +32,14 @@ export default {
         return await handleContact(request, env);
       }
       if (url.pathname === "/members/api/leads" && request.method === "GET") {
-        return await requireMembers(request, env, () => listLeads(env));
+        return await requireMembers(request, env, url, () => listLeads(request, env));
       }
       if (url.pathname === "/members/api/leads/delete" && request.method === "POST") {
-        return await requireMembers(request, env, () => deleteLead(request, env));
+        return await requireMembers(request, env, url, () => deleteLead(request, env));
       }
     } catch (err) {
+      // Generic error to the outside; detail only to the platform log stream.
+      console.error("worker error:", err && err.message);
       return json({ success: false, error: "Server error." }, 500);
     }
 
@@ -78,8 +80,16 @@ function clientIp(request) {
   return request.headers.get("cf-connecting-ip") || "unknown";
 }
 
-/** Members API is only reachable once Cloudflare Access guards /members/*. */
-async function requireMembers(request, env, next) {
+/**
+ * Members API guard.
+ * - Requires Cloudflare Access to be active on /members/* (the Access JWT
+ *   header is stamped by Cloudflare's edge after login; it cannot be spoofed
+ *   from outside because Access strips inbound copies).
+ * - CSRF defence for state-changing calls: the Origin must be our own host
+ *   and the request must carry the custom X-Requested-With header, which
+ *   cross-site forms and no-cors fetches cannot set.
+ */
+async function requireMembers(request, env, url, next) {
   const hasAccess = request.headers.get("cf-access-jwt-assertion");
   if (!hasAccess && env.ALLOW_UNLOCKED !== "true") {
     return json(
@@ -87,7 +97,53 @@ async function requireMembers(request, env, next) {
       403
     );
   }
+  if (request.method !== "GET") {
+    const origin = request.headers.get("origin");
+    if (origin && origin !== url.origin) {
+      return json({ success: false, error: "Forbidden." }, 403);
+    }
+    if (request.headers.get("x-requested-with") !== "fetch") {
+      return json({ success: false, error: "Forbidden." }, 403);
+    }
+  }
   return next();
+}
+
+/** Who is acting, per Cloudflare Access (empty string before lock is on). */
+function actor(request) {
+  return request.headers.get("cf-access-authenticated-user-email") || "";
+}
+
+/**
+ * Append-only audit trail (separate `audit:` keyspace; the members API has
+ * no write/delete route for it, so members cannot alter their own trail).
+ * Entries hold identifiers and actor metadata only — never message content.
+ */
+async function auditLog(env, request, action, target, result) {
+  try {
+    const invTs = String(1e13 - Date.now()).padStart(13, "0");
+    await env.LEADS.put(
+      `audit:${invTs}:${crypto.randomUUID().slice(0, 8)}`,
+      JSON.stringify({
+        at: new Date().toISOString(),
+        action,
+        target: target || null,
+        result,
+        actor: actor(request),
+        ip: clientIp(request),
+        ua: (request.headers.get("user-agent") || "").slice(0, 200),
+      }),
+      { expirationTtl: 60 * 60 * 24 * 730 } // keep audit entries 2 years
+    );
+  } catch (e) {
+    console.error("audit write failed:", e && e.message);
+  }
+}
+
+/** Retention: stored leads auto-delete after RETENTION_DAYS (default 365). */
+function retentionSeconds(env) {
+  const days = parseInt(env.RETENTION_DAYS || "365", 10);
+  return (isNaN(days) || days < 1 ? 365 : days) * 24 * 60 * 60;
 }
 
 /* ───────────── crypto (AES-256-GCM) ───────────── */
@@ -168,7 +224,10 @@ async function handleContact(request, env) {
   // Key sorts newest-first lexicographically (inverted timestamp).
   const invTs = String(1e13 - Date.now()).padStart(13, "0");
   const id = `lead:${invTs}:${crypto.randomUUID().slice(0, 8)}`;
-  await env.LEADS.put(id, await encryptJson(env, record));
+  await env.LEADS.put(id, await encryptJson(env, record), {
+    expirationTtl: retentionSeconds(env),
+  });
+  await auditLog(env, request, "lead.received", id, "ok");
 
   return json({ success: true });
 }
@@ -179,7 +238,7 @@ function str(v, max) {
 
 /* ───────────── members inbox ───────────── */
 
-async function listLeads(env) {
+async function listLeads(request, env) {
   if (!env.LEADS || !env.DATA_KEY) {
     return json({ success: false, error: "Storage is not configured yet." }, 503);
   }
@@ -194,6 +253,7 @@ async function listLeads(env) {
       items.push({ id: k.name, error: "Cannot decrypt (was DATA_KEY changed?)" });
     }
   }
+  await auditLog(env, request, "inbox.view", null, `ok:${items.length}`);
   return json({ success: true, items });
 }
 
@@ -208,5 +268,6 @@ async function deleteLead(request, env) {
     return json({ success: false, error: "Invalid id." }, 400);
   }
   await env.LEADS.delete(body.id);
+  await auditLog(env, request, "lead.delete", body.id, "ok");
   return json({ success: true });
 }

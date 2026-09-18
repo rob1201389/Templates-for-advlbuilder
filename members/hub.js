@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
             btn.disabled = true;
             fetch("/members/api/leads/delete", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
               body: JSON.stringify({ id: btn.getAttribute("data-id") }),
             }).then(load);
           });
