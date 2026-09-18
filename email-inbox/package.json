@@ -1,0 +1,8 @@
+{
+  "name": "rsmotocons-inbox",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "postal-mime": "^2.4.4"
+  }
+}

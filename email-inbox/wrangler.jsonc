@@ -1,0 +1,14 @@
+{
+  "name": "rsmotocons-inbox",
+  "main": "worker.js",
+  "compatibility_date": "2026-01-01",
+  "workers_dev": false,
+  "kv_namespaces": [
+    { "binding": "LEADS", "id": "930eece805d647888c9296cfd2c91db1" }
+  ],
+  "vars": {
+    "ADMIN_EMAILS": "rsmotocons@gmail.com",
+    "ORG_NAME": "RSMotoCons",
+    "INBOX_RETENTION_DAYS": "730"
+  }
+}
