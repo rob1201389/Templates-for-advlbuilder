@@ -24,7 +24,7 @@ import PostalMime from "postal-mime";
 
 const CSP =
   "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; " +
-  "form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+  "frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 export default {
   async fetch(request, env) {
@@ -39,6 +39,10 @@ export default {
       }
       if (request.method === "GET" && url.pathname === "/") {
         return await renderInbox(request, env, who);
+      }
+      // Sanitised email HTML, served for embedding in a sandboxed iframe.
+      if (request.method === "GET" && url.pathname === "/msg-html") {
+        return await renderMsgHtml(request, env);
       }
       return page(404, "Not found", "<p>Nothing here.</p>");
     } catch (err) {
@@ -125,7 +129,13 @@ function messageItem(m) {
             <tr><th>Subject</th><td>${esc(m.subject || "(no subject)")}</td></tr>
           </table>
           ${atts}
-          <pre class="text">${esc(m.text || "(no plain-text body)")}</pre>
+          ${m.html
+            ? `<iframe class="eml" loading="lazy"
+                 sandbox="allow-popups allow-popups-to-escape-sandbox"
+                 src="/msg-html?id=${encodeURIComponent(m.id)}"
+                 title="Formatted email"></iframe>
+               <details class="plain"><summary>Show plain text</summary><pre class="text">${esc(m.text || "(no plain-text body)")}</pre></details>`
+            : `<pre class="text">${esc(m.text || "(no plain-text body)")}</pre>`}
           <form method="POST" action="/delete" onsubmit="return confirm('Delete this message permanently?')">
             <input type="hidden" name="id" value="${esc(m.id)}">
             <button class="del" type="submit">Delete</button>
@@ -153,6 +163,87 @@ function notAuthorisedBody(request, env) {
   const email = esc(request.headers.get("cf-access-authenticated-user-email") || "unknown");
   return `<p>You are signed in as <strong>${email}</strong>, which is not permitted to view the info@ inbox.</p>
           <p>This inbox is restricted to the administrator.</p>`;
+}
+
+/**
+ * Serves a single message's HTML body, sanitised, as a standalone document.
+ * It is embedded by the inbox page inside a sandboxed iframe (no scripts, no
+ * same-origin), and this response also carries a script-free CSP — so email
+ * markup renders (formatting, images) but nothing in it can execute.
+ * Reachable only by the admin (the whole worker is gated in fetch()).
+ */
+async function renderMsgHtml(request, env) {
+  const id = new URL(request.url).searchParams.get("id") || "";
+  if (!id.startsWith("inbox:")) return new Response("Bad id", { status: 400 });
+  const stored = await env.LEADS.get(id);
+  if (!stored) return htmlFrame("<p>Message not found.</p>");
+  let m;
+  try {
+    m = await decryptJson(env, stored);
+  } catch {
+    return htmlFrame("<p>Cannot decrypt this message.</p>");
+  }
+  const safe = sanitizeHtml(m.html || "");
+  const inner = safe || `<pre>${esc(m.text || "(no content)")}</pre>`;
+  return htmlFrame(inner);
+}
+
+function htmlFrame(inner) {
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<base target="_blank">
+<style>
+  html,body{margin:0;padding:14px;background:#fff;color:#16181d;
+    font:15px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    word-wrap:break-word;overflow-wrap:break-word;}
+  img{max-width:100%;height:auto;}
+  table{max-width:100%;}
+  pre{white-space:pre-wrap;word-wrap:break-word;}
+  a{color:#1155cc;}
+</style></head><body>${inner}</body></html>`;
+  return new Response(doc, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      // No script-src at all: even if a <script> slipped past the sanitiser it can't run.
+      "Content-Security-Policy":
+        "default-src 'none'; img-src * data: https:; style-src 'unsafe-inline'; " +
+        "font-src * data:; media-src *; frame-ancestors 'self'",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+/**
+ * Conservative HTML sanitiser (defence-in-depth alongside the iframe sandbox
+ * and script-free CSP). Strips executable/embedding elements, inline event
+ * handlers, and script-y URLs. Keeps layout markup, inline styles and images.
+ */
+function sanitizeHtml(html) {
+  if (!html) return "";
+  let s = String(html);
+  s = s.replace(/<!--[\s\S]*?-->/g, "");
+  // Remove dangerous elements with their content.
+  s = s.replace(
+    /<\s*(script|style|iframe|object|embed|link|meta|base|form|frameset|frame|noscript|template)\b[\s\S]*?<\s*\/\s*\1\s*>/gi,
+    ""
+  );
+  // Remove any stray opening/self-closing forms of those elements.
+  s = s.replace(
+    /<\s*\/?\s*(script|iframe|object|embed|link|meta|base|form|frameset|frame|noscript|template)\b[^>]*>/gi,
+    ""
+  );
+  // Strip on*= event-handler attributes (quoted and unquoted).
+  s = s.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "");
+  s = s.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "");
+  s = s.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "");
+  // Neutralise javascript:/vbscript:/text-html-data URLs in href/src.
+  s = s.replace(
+    /((?:href|src|xlink:href)\s*=\s*)("|')\s*(?:javascript|vbscript|data:text\/html)[^"']*\2/gi,
+    '$1$2#$2'
+  );
+  return s;
 }
 
 /* ───────────── page shell ───────────── */
@@ -189,6 +280,11 @@ function page(status, title, bodyHtml) {
   pre.text { white-space:pre-wrap; word-wrap:break-word; background:#f7f8fa; border:1px solid #eceef2;
              border-radius:8px; padding:12px; font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-x:auto; }
   @media (prefers-color-scheme: dark){ pre.text{ background:#0f1218; border-color:#262b35; } }
+  iframe.eml { width:100%; height:560px; border:1px solid #e2e5ea; border-radius:8px;
+               background:#fff; margin:12px 0; display:block; }
+  @media (prefers-color-scheme: dark){ iframe.eml{ border-color:#262b35; } }
+  details.plain { margin:2px 0 4px; }
+  details.plain summary { cursor:pointer; color:#6a7180; font-size:.85rem; }
   .atts { font-size:.9rem; color:#444; }
   button.del { margin-top:12px; background:#d21b3a; color:#fff; border:0; border-radius:8px;
                padding:8px 14px; font-size:.9rem; cursor:pointer; }
