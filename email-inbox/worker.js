@@ -79,6 +79,23 @@ function adminIdentity(request, env) {
 
 /* ───────────── reader UI ───────────── */
 
+/** Shared admin nav linking the info@ inbox to the other admin destinations. */
+function adminNav(active) {
+  const SITE = "https://rsmotocons.com";
+  const links = [
+    { key: "inbox", label: "info@ Inbox", href: "/" },
+    { key: "messages", label: "Customer messages", href: `${SITE}/members/` },
+    { key: "plates", label: "Trade plates", href: `${SITE}/members/tradeplate/` },
+    { key: "settings", label: "Settings", href: `${SITE}/members/tradeplate/settings` },
+  ];
+  return `<nav class="adminnav">
+    <span class="brand">RS<span style="color:#d21b3a">Moto</span>Cons Admin</span>
+    ${links
+      .map((l) => `<a href="${l.href}"${l.key === active ? ' class="active"' : ""}>${esc(l.label)}</a>`)
+      .join("")}
+  </nav>`;
+}
+
 async function renderInbox(request, env, who) {
   const list = await env.LEADS.list({ prefix: "inbox:", limit: 500 });
   const rows = [];
@@ -95,6 +112,7 @@ async function renderInbox(request, env, who) {
   await auditLog(env, { action: "inbox.view", actor: who, result: `ok:${rows.length}` });
 
   const body = `
+    ${adminNav("inbox")}
     <header class="bar">
       <div>
         <h1>info@ inbox</h1>
@@ -261,6 +279,13 @@ function page(status, title, bodyHtml) {
          background:#f4f5f7; color:#16181d; }
   @media (prefers-color-scheme: dark){ body{ background:#0f1115; color:#e7e9ee; } }
   .wrap { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+  .adminnav { display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px;
+              padding-bottom:14px; margin-bottom:18px; border-bottom:1px solid #e2e5ea; }
+  .adminnav .brand { font-weight:700; margin-right:6px; }
+  .adminnav a { color:#6a7180; text-decoration:none; font-size:.92rem; padding:3px 0; }
+  .adminnav a:hover { color:#16181d; }
+  .adminnav a.active { color:#d21b3a; font-weight:600; }
+  @media (prefers-color-scheme: dark){ .adminnav{ border-color:#262b35; } .adminnav a:hover{ color:#e7e9ee; } }
   .bar { display:flex; align-items:center; justify-content:space-between; gap:16px;
          padding-bottom:16px; border-bottom:2px solid #d21b3a; margin-bottom:20px; }
   h1 { font-size:1.5rem; margin:0; }
