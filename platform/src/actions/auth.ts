@@ -28,7 +28,9 @@ const loginSchema = z.object({
 const DUMMY_HASH =
   "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHRzb21lc2FsdA$6yFxpFYyC1IVdyeWpSXwQrsy6+Ho9puNSHo46VXpjRs";
 
-export type LoginResult = { ok: true } | { ok: false; error: string };
+export type LoginResult =
+  | { ok: true; mustChangePassword: boolean }
+  | { ok: false; error: string };
 
 export async function login(input: unknown): Promise<LoginResult> {
   const parsed = loginSchema.safeParse(input);
@@ -41,7 +43,13 @@ export async function login(input: unknown): Promise<LoginResult> {
       active: true,
       tenant: { slug: tenantSlug, active: true },
     },
-    select: { id: true, tenantId: true, role: true, passwordHash: true },
+    select: {
+      id: true,
+      tenantId: true,
+      role: true,
+      passwordHash: true,
+      mustChangePassword: true,
+    },
   });
 
   const hash = user?.passwordHash ?? DUMMY_HASH;
@@ -74,7 +82,56 @@ export async function login(input: unknown): Promise<LoginResult> {
     user.id,
     { ip: (await headers()).get("x-forwarded-for") }
   );
-  return { ok: true };
+  // A user provisioned with a temporary password is signed in but the UI
+  // must route them straight to the change-password screen; the middleware
+  // and layout gate on this flag until changePassword clears it.
+  return { ok: true, mustChangePassword: user.mustChangePassword };
+}
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(256),
+  newPassword: z
+    .string()
+    .min(12, "New password must be at least 12 characters")
+    .max(256)
+    .refine((p) => /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p), {
+      message: "Use upper and lower case letters and at least one number",
+    }),
+});
+
+export async function changePassword(input: unknown): Promise<LoginResult> {
+  const { getSession } = await import("../lib/session");
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Not signed in." };
+
+  const parsed = changePasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const { currentPassword, newPassword } = parsed.data;
+  if (currentPassword === newPassword) {
+    return { ok: false, error: "The new password must be different from the current one." };
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { id: session.userId, active: true },
+    select: { id: true, passwordHash: true },
+  });
+  if (!user || !(await argon2.verify(user.passwordHash, currentPassword))) {
+    return { ok: false, error: "Current password is incorrect." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await argon2.hash(newPassword, { type: argon2.argon2id }),
+      mustChangePassword: false,
+    },
+  });
+  await audit(session, "auth.password.change", "User", user.id, {
+    ip: (await headers()).get("x-forwarded-for"),
+  });
+  return { ok: true, mustChangePassword: false };
 }
 
 export async function logout(): Promise<void> {
