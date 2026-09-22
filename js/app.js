@@ -528,8 +528,98 @@ async function downloadAll() {
   }
 }
 
+/* ---------- brand rules page ---------- */
+const RULES_KEY = "adbuilder_rules";
+
+function loadRules() {
+  try {
+    Object.assign(RULES, RULES_DEFAULTS,
+      JSON.parse(localStorage.getItem(RULES_KEY)) || {});
+  } catch { Object.assign(RULES, RULES_DEFAULTS); }
+}
+function saveRules() {
+  try { localStorage.setItem(RULES_KEY, JSON.stringify(RULES)); } catch {}
+}
+
+function fmtRuleVal(key) {
+  const v = RULES[key];
+  if (typeof v === "boolean") return v ? "On" : "Off";
+  if (key === "owafWidthPct") return v + "%";
+  return "×" + Number(v).toFixed(2).replace(/0$/, "");
+}
+
+function buildRulesPage() {
+  const body = $("rules-body");
+  body.innerHTML = "";
+  for (const group of RULE_BOOK) {
+    const g = document.createElement("div");
+    g.className = "rules-group";
+    g.innerHTML = `<h4>${group.group}</h4>`;
+    for (const item of group.items) {
+      const row = document.createElement("div");
+      row.className = "rule-item" + (item.key ? " tunable" : "");
+      const tag = item.key ? "SETTING" : "LOCKED";
+      let ctl = "";
+      row.innerHTML = `<span class="lock">${tag}</span><div><span>${item.text}</span></div>`;
+      if (item.key) {
+        const wrap = document.createElement("div");
+        wrap.className = "ctl";
+        if (item.type === "toggle") {
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !!RULES[item.key];
+          cb.addEventListener("change", () => {
+            RULES[item.key] = cb.checked;
+            saveRules(); refreshRuleVals(); scheduleRender();
+          });
+          wrap.appendChild(cb);
+        } else {
+          const r = document.createElement("input");
+          r.type = "range";
+          r.min = item.min; r.max = item.max; r.step = item.step;
+          r.value = RULES[item.key];
+          r.addEventListener("input", () => {
+            RULES[item.key] = +r.value;
+            saveRules(); refreshRuleVals(); scheduleRender();
+          });
+          wrap.appendChild(r);
+        }
+        const val = document.createElement("span");
+        val.className = "val";
+        val.dataset.ruleKey = item.key;
+        val.textContent = fmtRuleVal(item.key);
+        wrap.appendChild(val);
+        row.querySelector("div").appendChild(wrap);
+      }
+      g.appendChild(row);
+    }
+    body.appendChild(g);
+  }
+}
+
+function refreshRuleVals() {
+  document.querySelectorAll("[data-rule-key]").forEach((el) => {
+    el.textContent = fmtRuleVal(el.dataset.ruleKey);
+  });
+}
+
+function wireRulesPage() {
+  $("rules-btn").addEventListener("click", () => { $("rules-overlay").hidden = false; });
+  $("rules-close").addEventListener("click", () => { $("rules-overlay").hidden = true; });
+  $("rules-overlay").addEventListener("click", (e) => {
+    if (e.target === $("rules-overlay")) $("rules-overlay").hidden = true;
+  });
+  $("rules-reset").addEventListener("click", () => {
+    Object.assign(RULES, RULES_DEFAULTS);
+    saveRules(); buildRulesPage(); scheduleRender();
+  });
+}
+
 /* ---------- boot ---------- */
 function startApp(userEmail) {
+  loadRules();
+  buildRulesPage();
+  wireRulesPage();
   $("user-email").textContent = userEmail;
   $("logout-btn").addEventListener("click", () => { logoutUser(); location.reload(); });
 

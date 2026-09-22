@@ -40,6 +40,93 @@ const OWAF_FILES = {
    communications, and it must never be duplicated in a layout. */
 const TOYOTA_LOGO_FILE = "assets/logos/toyota-vertical.png";
 
+/* ============================================================
+   BRAND RULES — the live settings that drive the render engine.
+   Defaults match the Toyota Masterbrand Guidelines; the Brand
+   Rules page shows every rule with its source, and the few
+   tunable values below can be adjusted there (within the ranges
+   the guidelines allow).
+   ============================================================ */
+const RULES_DEFAULTS = {
+  logoScale: 1.0,       // multiplier on the spec logo size
+  marginScale: 1.0,     // 1.0 = margins at 40% of logo height
+  owafWidthPct: 175,    // OWAF width as % of Toyota logo width
+  showDealerHeader: true,
+  showSignOff: true,
+};
+let RULES = Object.assign({}, RULES_DEFAULTS);
+
+/* The rule book shown on the Brand Rules page. Locked rules are
+   enforced in code and cannot be changed; keyed rules bind to the
+   RULES values above. */
+const RULE_BOOK = [
+  {
+    group: "Logo — 'Big respect' (Advertising golden rules)",
+    items: [
+      { locked: true, text: "The Toyota Product VERTICAL logo (emblem over TOYOTA) is used on all paid communications. The horizontal logo is never used in communications." },
+      { locked: true, text: "The Toyota logo is never duplicated in a layout. Dealer composite lock-ups are reserved for restricted-space and identity applications, so they are not placed on standard ads." },
+      { locked: true, text: "Logo sits top left, centre or right; headline, CTA, tagline and disclaimers follow the logo/text alignment." },
+      { key: "logoScale", type: "range", min: 0.7, max: 1.4, step: 0.05,
+        text: "Logo size follows the layout-shape specification (≈H/6 landscape, ≈H/7 square, width-based portrait). Fine-tune multiplier:" },
+      { key: "marginScale", type: "range", min: 0.75, max: 1.25, step: 0.05,
+        text: "Margins run 30–50% of the Toyota logo height (guideline default 40%). Fine-tune multiplier:" },
+    ],
+  },
+  {
+    group: "Dealer tagging (as text, not logos)",
+    items: [
+      { locked: true, text: "The dealership appears as text: a dealer tag header at the top (Toyota Type Semibold, title case, cap height ≈ Toyota logo cap height) and/or a sign-off at the base." },
+      { locked: true, text: "The sign-off (dealer name semibold + details regular) is placed at the bottom of the communication and reads before 'OWAF' and the disclaimer." },
+      { key: "showDealerHeader", type: "toggle", text: "Show the dealer tag header at the top:" },
+      { key: "showSignOff", type: "toggle", text: "Show the dealer sign-off at the base:" },
+    ],
+  },
+  {
+    group: "OWAF — 'Always feeling it'",
+    items: [
+      { locked: true, text: "'OH WHAT A FEELING' supports the Toyota logo on all paid communications, using the official logo files only — never typed out." },
+      { locked: true, text: "OWAF sits at the base of the layout and follows the text/logo alignment. Red on light surfaces; white on black or imagery." },
+      { key: "owafWidthPct", type: "range", min: 150, max: 200, step: 5,
+        text: "OWAF width is 175% of the Toyota logo width (200% for out-of-home). Current %:" },
+    ],
+  },
+  {
+    group: "Colour — 'Own your colour'",
+    items: [
+      { locked: true, text: "Backgrounds and strips use white, black and Toyota Red (#EB0A1E, PMS 186C) only — never grey. Red devices switch to black on red backgrounds." },
+      { locked: true, text: "Where possible the accent red features in all creative." },
+    ],
+  },
+  {
+    group: "Typography — 'Style masters'",
+    items: [
+      { locked: true, text: "Toyota Type is the only brand typeface. Where unavailable, Arial is used (the app renders Arial until a Toyota Type file is loaded in panel 4). No italics, ever." },
+      { locked: true, text: "Disclaimers: Toyota Type Regular, sentence case, forced justified with the last line following the headline alignment, placed under 'OWAF' at the base." },
+    ],
+  },
+  {
+    group: "Layouts & devices",
+    items: [
+      { locked: true, text: "Three layout families: full-bleed image; colour background (white/black/red); strip — a white/red/black band on any edge, 30–60% of the layout when with imagery." },
+      { locked: true, text: "Text holders (red roundel, pill, rounded square) may be used to focus attention on offers. Balloons are not permitted; celebration style uses circular confetti/firework particle graphics." },
+      { locked: true, text: "CTA styles: red pill (maximum standout), text-only uppercase (medium), sentence case with arrow (minimal). One style per campaign." },
+    ],
+  },
+  {
+    group: "Social media",
+    items: [
+      { locked: true, text: "Organic image posts carry NO branding (reference the brand in copy). Paid placements carry the full furniture — that's the Branding toggle in panel 4." },
+      { locked: true, text: "Feed creative 1:1, stories 9:16, images under 20% text where placements require it. Display picture: white Toyota vertical logo on a black circle." },
+    ],
+  },
+  {
+    group: "Approval",
+    items: [
+      { locked: true, text: "Dealer-developed creative requires TMCA brand approval (AdBuilder Brand Support) before running. This tool produces artwork structured to the guidelines; approval is still the final gate." },
+    ],
+  },
+];
+
 const TOYOTA_MODELS = [
   { name: "Yaris",            grades: ["Ascent Sport", "SX", "ZR"] },
   { name: "Yaris Cross",      grades: ["GX", "GXL", "Urban"] },

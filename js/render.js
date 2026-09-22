@@ -216,8 +216,10 @@ function logoSpec(W, H) {
   else if (r >= 1.2) h = H / 6.5;
   else if (r >= 0.8) h = Math.min(W, H) / 7;
   else h = W / 5.5;
-  h = Math.min(h, Math.min(W, H) * 0.17);
-  return { h, w: h * 1.245, margin: h * 0.4 };
+  h *= (typeof RULES !== "undefined" ? RULES.logoScale : 1);
+  h = Math.min(h, Math.min(W, H) * 0.2);
+  const mScale = typeof RULES !== "undefined" ? RULES.marginScale : 1;
+  return { h, w: h * 1.245, margin: h * 0.4 * mScale };
 }
 
 function alignAnchor(align, x0, x1) {
@@ -245,6 +247,7 @@ function drawToyotaLogo(ctx, s, W, H, colour) {
 /* Dealer tag header: dealership name as text at the top (15.7). */
 function drawDealerHeader(ctx, s, W, H, logo, colour) {
   if (!s.dealer || s.branding === "organic") return;
+  if (typeof RULES !== "undefined" && !RULES.showDealerHeader) return;
   const px = logo.h * 0.17;
   ctx.save();
   ctx.font = F(px, 600);
@@ -302,7 +305,7 @@ function drawBaseFurniture(ctx, s, W, H, logo, opts) {
 
   // OWAF tagline: width 175% of the Toyota logo width
   const owafSurface = opts.surface || null;
-  let ow = Math.min(logo.w * 1.75, W * 0.44);
+  let ow = Math.min(logo.w * ((typeof RULES !== "undefined" ? RULES.owafWidthPct : 175) / 100), W * 0.44);
   const probe = owafFor(ctx, s, anchor.ta === "right" ? anchor.x - ow : anchor.x, baseY - ow * 0.35, ow, ow * 0.35, owafSurface);
   if (probe) {
     const oh = ow * (probe.height / probe.width);
@@ -313,7 +316,7 @@ function drawBaseFurniture(ctx, s, W, H, logo, opts) {
   }
 
   // dealer sign-off: name (semibold) + details (regular), read before OWAF
-  if (s.dealer) {
+  if (s.dealer && (typeof RULES === "undefined" || RULES.showSignOff)) {
     const np = logo.h * 0.15;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = anchor.ta;
@@ -480,7 +483,7 @@ function drawStrip(ctx, W, H, s, assets, opts) {
   const logo = { x: lx, y: sy + m, w: spec.w, h: spec.h, margin: m, align };
   if (s.branding !== "organic" && CUR_ASSETS.toyotaLogo) {
     putImage(ctx, "logo", tinted(CUR_ASSETS.toyotaLogo, ink), logo.x, logo.y, logo.w, logo.h);
-    if (s.dealer) {
+    if (s.dealer && (typeof RULES === "undefined" || RULES.showDealerHeader)) {
       const px = logo.h * 0.17;
       ctx.font = F(px, 600); ctx.fillStyle = ink; ctx.textBaseline = "top";
       ctx.textAlign = align === "left" ? "right" : "left";
@@ -540,7 +543,7 @@ function drawBaseFurnitureIn(ctx, s, x0, x1, bottom, logo, surface, ink) {
     ctx.globalAlpha = 1;
     baseY = dy - dp * 0.5;
   }
-  let ow = Math.min(logo.w * 1.75, (x1 - x0) * 0.6);
+  let ow = Math.min(logo.w * ((typeof RULES !== "undefined" ? RULES.owafWidthPct : 175) / 100), (x1 - x0) * 0.6);
   const probe = owafFor(ctx, s, 0, 0, 0, 0, surface);
   if (probe) {
     const oh = ow * (probe.height / probe.width);
@@ -548,7 +551,7 @@ function drawBaseFurnitureIn(ctx, s, x0, x1, bottom, logo, surface, ink) {
     putImage(ctx, "owaf", probe, ox, baseY - oh, ow, oh);
     baseY -= oh + logo.h * 0.18;
   }
-  if (s.dealer) {
+  if (s.dealer && (typeof RULES === "undefined" || RULES.showSignOff)) {
     const np = logo.h * 0.15;
     ctx.textAlign = anchor.ta; ctx.textBaseline = "alphabetic";
     if (s.dealerDetails) {
@@ -689,7 +692,7 @@ function drawOffer(ctx, W, H, s, assets, opts) {
     const np = Math.min(stripH * 0.26, logo.h * 0.16);
     ctx.textBaseline = "middle";
     const left = logo.align !== "left";
-    if (s.dealer) {
+    if (s.dealer && (typeof RULES === "undefined" || RULES.showSignOff)) {
       ctx.textAlign = left ? "left" : "right";
       ctx.font = F(np, 600); ctx.fillStyle = BRAND.white;
       const dx = left ? m : W - m;

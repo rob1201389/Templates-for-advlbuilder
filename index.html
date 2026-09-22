@@ -34,10 +34,30 @@
   <header class="topbar">
     <div class="topbar-brand"><span class="brand-dot"></span> Chatswood &amp; Ryde Toyota — Social Assets Helper</div>
     <div class="topbar-user">
+      <button id="rules-btn" class="btn small rules-btn">⚙ Brand rules</button>
       <span id="user-email"></span>
       <button id="logout-btn" class="btn small">Log out</button>
     </div>
   </header>
+
+  <!-- ======= Brand Rules page ======= -->
+  <div id="rules-overlay" hidden>
+    <div class="rules-page">
+      <div class="rules-head">
+        <div>
+          <h2>Brand rules</h2>
+          <p>Every rule the engine enforces, from the Toyota Masterbrand Guidelines.
+             Locked rules are built into the templates; the sliders fine-tune the few
+             values the guidelines allow. Changes apply to previews and exports instantly.</p>
+        </div>
+        <div class="rules-actions">
+          <button id="rules-reset" class="btn small">↺ Guideline defaults</button>
+          <button id="rules-close" class="btn primary small">Done</button>
+        </div>
+      </div>
+      <div id="rules-body" class="rules-body"></div>
+    </div>
+  </div>
 
   <main class="layout">
     <!-- ---- Controls ---- -->
