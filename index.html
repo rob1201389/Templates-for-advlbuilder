@@ -158,19 +158,17 @@
             <input id="f-scrim" type="range" min="0" max="80" value="30">
           </span>
         </label>
-        <label class="field"><span>Vehicle cutout overlay (transparent PNG, sits on top)</span>
-          <input id="f-overlay" type="file" accept="image/*">
+        <label class="field"><span>Vehicles — up to 3 (transparent PNG or white-background studio image)</span></label>
+        <div class="veh-row"><span class="veh-n">1</span><input id="f-veh1" type="file" accept="image/*"><input id="f-veh1-scale" type="range" min="30" max="150" value="100" title="Vehicle 1 size"></div>
+        <div class="veh-row"><span class="veh-n">2</span><input id="f-veh2" type="file" accept="image/*"><input id="f-veh2-scale" type="range" min="30" max="150" value="100" title="Vehicle 2 size"></div>
+        <div class="veh-row"><span class="veh-n">3</span><input id="f-veh3" type="file" accept="image/*"><input id="f-veh3-scale" type="range" min="30" max="150" value="100" title="Vehicle 3 size"></div>
+        <label class="field" style="margin-top:6px"><span style="font-weight:400">
+          <input id="f-strip-white" type="checkbox" checked>
+          Remove white studio background automatically</span>
         </label>
-        <label class="field"><span>Overlay size &amp; position</span>
-          <span class="accent-row">
-            <input id="f-ov-scale" type="range" min="40" max="130" value="90">
-            <select id="f-ov-pos" style="width:auto">
-              <option value="center">Centre</option>
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-            </select>
-          </span>
-        </label>
+        <p class="note">Each vehicle: choose the file, set its size with the slider, then
+          <b>drag it on any preview</b> to position it (double-click snaps it back).
+          One vehicle sits centred; two split left/right; three line up with the middle one in front.</p>
         <label class="field"><span>Dealer logo — the official Chatswood / Ryde / combined lockup loads automatically; upload here only to override</span>
           <input id="f-logo" type="file" accept="image/*">
         </label>

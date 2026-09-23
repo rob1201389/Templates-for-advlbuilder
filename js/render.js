@@ -192,18 +192,37 @@ function drawBackground(ctx, W, H, assets, opts, fx = 0.5, fy = 0.5, x = 0, y = 
   }
 }
 
+/* Up to three vehicle cutouts share the zone: single centred, pair at
+   30/70, trio at 20/50/80 with the middle vehicle larger and in front.
+   Each vehicle has its own size (vehScaleN) and can be dragged on the
+   preview (NUDGE key "vehN"). */
 function drawOverlayImg(ctx, x, y, w, h) {
-  const img = CUR_ASSETS.overlay;
-  if (!img) return null;
-  const scale = CUR && CUR.ovScale ? CUR.ovScale : 0.9;
-  const r = Math.min(w / img.width, h / img.height) * scale;
-  const dw = img.width * r, dh = img.height * r;
-  let dx = x + (w - dw) / 2;
-  if (CUR && CUR.ovPos === "left") dx = x + w * 0.02;
-  if (CUR && CUR.ovPos === "right") dx = x + w - dw - w * 0.02;
-  const dy = y + h - dh;
-  putImage(ctx, "overlay", img, dx, dy, dw, dh);
-  return { x: dx, y: dy, w: dw, h: dh };
+  const vehs = (CUR_ASSETS.vehicles || [])
+    .map((img, i) => ({ img, i }))
+    .filter((v) => v.img);
+  if (!vehs.length) return null;
+  const n = vehs.length;
+  const slots = n === 1 ? [0.5] : n === 2 ? [0.3, 0.7] : [0.2, 0.5, 0.8];
+  const order = n === 3 ? [0, 2, 1] : n === 2 ? [0, 1] : [0];
+  let last = null;
+  for (const oi of order) {
+    const v = vehs[oi];
+    const key = "veh" + (v.i + 1);
+    const scale = (CUR && CUR["vehScale" + (v.i + 1)]) || 1;
+    const baseH = h * (n === 1 ? 1.18 : n === 2 ? 0.85 : 0.72)
+      * (n === 3 && oi === 1 ? 1.3 : 1);
+    const r = Math.min((w / n) * 1.4 / v.img.width, baseH / v.img.height) * scale;
+    const dw = v.img.width * r, dh = v.img.height * r;
+    let cx = x + w * slots[oi];
+    let by = y + h;
+    const nd = NUDGE[key];
+    if (nd) { cx += nd.dx * ctx.canvas.width; by += nd.dy * ctx.canvas.height; }
+    const dx = cx - dw / 2, dy = by - dh;
+    if (REC) REC.push({ type: "img", kind: "vehicle", key, img: v.img, x: dx, y: dy, w: dw, h: dh });
+    if (!(SUPPRESS && SUPPRESS.vehicle)) ctx.drawImage(v.img, dx, dy, dw, dh);
+    last = { x: dx, y: dy, w: dw, h: dh };
+  }
+  return last;
 }
 
 /* ================= MASTERBRAND CHROME ================= */
@@ -769,7 +788,7 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
     ctx.fillText(giant, W / 2, H * 0.5);
   }
   const ovRegion = { x: W * 0.07, y: H * 0.3, w: W * 0.86, h: H * 0.42 };
-  if (CUR_ASSETS.overlay) {
+  if ((CUR_ASSETS.vehicles || []).some(Boolean)) {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.beginPath();
@@ -1028,7 +1047,7 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
     ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
     y += pk; ctx.fillText(kicker.toUpperCase(), W / 2, y);
   }
-  const base1 = portrait ? H * 0.085 : H * 0.14;
+  const base1 = portrait ? H * 0.085 : H * 0.12;
   const p1 = fitText(ctx, h1.toUpperCase(), W * 0.78, base1, 800);
   ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
   y += p1 * 1.12; ctx.fillText(h1.toUpperCase(), W / 2, y);
@@ -1036,33 +1055,46 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
   ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
   y += p2 * 1.02; ctx.fillText(h2.toUpperCase(), W / 2, y);
 
-  // vehicles across the horizon
-  drawOverlayImg(ctx, W * 0.03, y + U * 0.01, W * 0.94, Math.max(U * 0.14, H * 0.66 - y));
+  // vehicles across the horizon — zone bottom pinned above the lower block
+  const zoneTop = Math.min(y + U * 0.01, H * 0.55);
+  drawOverlayImg(ctx, W * 0.03, zoneTop, W * 0.94, Math.max(H * 0.1, H * 0.64 - zoneTop));
 
-  // lower block: sub-line, red pill, dealer line
-  let ly = H * (portrait ? 0.72 : 0.70);
-  const sub1 = tok(s.sub1, s), pill = tok(s.cta, s), foot = tok(s.foot1, s);
-  if (sub1) {
-    const ps = fitText(ctx, sub1, W * 0.8, U * 0.042, 600);
-    ctx.font = F(ps, 600); ctx.fillStyle = BRAND.white;
-    ctx.fillText(sub1, W / 2, ly);
-    ly += ps * 1.9;
-  }
-  if (pill && paid) {
-    const pp = U * 0.03;
-    drawCtaButton(ctx, pill.toUpperCase(), W / 2, ly, pp, BRAND.red, BRAND.white, W * 0.36);
-    ly += pp * 3.1;
-  }
-  if (foot) {
-    const pf = fitText(ctx, foot, W * 0.7, U * 0.032, 500);
-    ctx.font = F(pf, 500); ctx.fillStyle = BRAND.white;
-    ctx.textAlign = "center";
-    ctx.fillText(foot, W / 2, ly);
-  }
-
+  // brand furniture first, so the lower block can sit safely above it.
+  // The sign-off is suppressed here: the dealership already appears in
+  // the header and the "at ..." line of this template.
+  let fTop;
   if (paid) {
-    drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
-  } else if (s.disclaimer) {
+    const keep = RULES.showSignOff;
+    RULES.showSignOff = false;
+    fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
+    RULES.showSignOff = keep;
+  } else {
+    fTop = H - logo.margin * 1.2;
+  }
+
+  // lower block bottom-anchored above the furniture: sub, pill, dealer line
+  const sub1 = tok(s.sub1, s), pill = tok(s.cta, s), foot = tok(s.foot1, s);
+  const pf = foot ? fitText(ctx, foot, W * 0.7, U * 0.032, 500) : 0;
+  const pp = pill && paid ? U * 0.03 : 0;
+  const ps = sub1 ? fitText(ctx, sub1, W * 0.8, U * 0.042, 600) : 0;
+  let cursor = Math.min(H * (portrait ? 0.84 : 0.815), fTop - U * 0.02);
+  if (foot) {
+    ctx.font = F(pf, 500); ctx.fillStyle = BRAND.white;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(foot, W / 2, cursor);
+    cursor -= pf * 1.9;
+  }
+  if (pp) {
+    drawCtaButton(ctx, pill.toUpperCase(), W / 2, cursor - pp * 1.05, pp, BRAND.red, BRAND.white, W * 0.36);
+    cursor -= pp * 3.2;
+  }
+  if (sub1) {
+    ctx.font = F(ps, 600); ctx.fillStyle = BRAND.white;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(sub1, W / 2, cursor);
+  }
+
+  if (!paid && s.disclaimer) {
     const dp = Math.max(9, U * 0.016);
     ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
     ctx.textAlign = "center"; ctx.textBaseline = "bottom";
@@ -1133,7 +1165,7 @@ function renderAdLayers(size, templateId, state, assets) {
 
 function renderAdBackground(size, templateId, state, assets) {
   const c = document.createElement("canvas");
-  SUPPRESS = { text: 1, cta: 1, logo: 1, owaf: 1, overlay: 1 };
+  SUPPRESS = { text: 1, cta: 1, logo: 1, owaf: 1, overlay: 1, vehicle: 1 };
   renderAd(c, size, templateId, state, assets, { hint: false });
   SUPPRESS = null;
   return c;

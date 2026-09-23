@@ -14,9 +14,75 @@ function saveCustom(c) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); }
 
 const assets = {
   bg: null, logo: null, owaf: null, overlay: null,
+  vehicles: [null, null, null],     // processed (white removed) images
+  vehiclesRaw: [null, null, null],  // originals as uploaded,
   logoPack: null,   // built-in dealer lockup for the selected dealership
   owafPack: {},     // built-in OWAF tagline variants
 };
+
+/* Make near-white studio backgrounds transparent so cutouts sit
+   cleanly on any backdrop; soft shadows are feathered, not cut. */
+function stripWhite(img) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  const x = c.getContext("2d");
+  x.drawImage(img, 0, 0);
+  try {
+    const d = x.getImageData(0, 0, c.width, c.height);
+    const p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const mn = Math.min(p[i], p[i + 1], p[i + 2]);
+      if (mn > 247) p[i + 3] = 0;
+      else if (mn > 230) p[i + 3] = Math.round(p[i + 3] * ((247 - mn) / 17));
+    }
+    x.putImageData(d, 0, 0);
+  } catch {}
+  return c;
+}
+
+/* Crop away transparent margins so the vehicle fills its slot. */
+function trimAlpha(source) {
+  const c = document.createElement("canvas");
+  c.width = source.naturalWidth || source.width;
+  c.height = source.naturalHeight || source.height;
+  const x = c.getContext("2d");
+  x.drawImage(source, 0, 0);
+  try {
+    const d = x.getImageData(0, 0, c.width, c.height).data;
+    let minX = c.width, minY = c.height, maxX = -1, maxY = -1, opaque = 0;
+    for (let yy = 0; yy < c.height; yy += 2) {
+      for (let xx = 0; xx < c.width; xx += 2) {
+        const a = d[(yy * c.width + xx) * 4 + 3];
+        if (a > 12) {
+          opaque++;
+          if (xx < minX) minX = xx;
+          if (xx > maxX) maxX = xx;
+          if (yy < minY) minY = yy;
+          if (yy > maxY) maxY = yy;
+        }
+      }
+    }
+    // no transparency (e.g. a JPG) or nothing found: keep as-is
+    if (maxX < 0 || opaque * 4 > c.width * c.height * 0.96) return c;
+    const pad = Math.round(Math.max(c.width, c.height) * 0.01);
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(c.width - 1, maxX + pad); maxY = Math.min(c.height - 1, maxY + pad);
+    const out = document.createElement("canvas");
+    out.width = maxX - minX + 1; out.height = maxY - minY + 1;
+    out.getContext("2d").drawImage(c, -minX, -minY);
+    return out;
+  } catch { return c; }
+}
+
+function processVehicles() {
+  const strip = $("f-strip-white").checked;
+  for (let i = 0; i < 3; i++) {
+    const raw = assets.vehiclesRaw[i];
+    assets.vehicles[i] = raw ? trimAlpha(strip ? stripWhite(raw) : raw) : null;
+  }
+  scheduleRender();
+}
 
 function loadImage(src, cb) {
   const img = new Image();
@@ -71,8 +137,9 @@ function readState() {
     owafVariant: $("f-owaf-variant").value,
     scrimMode: $("f-scrim-mode").value,
     scrim: (+$("f-scrim").value || 0) / 100,
-    ovScale: (+$("f-ov-scale").value || 90) / 100,
-    ovPos: $("f-ov-pos").value,
+    vehScale1: (+$("f-veh1-scale").value || 100) / 100,
+    vehScale2: (+$("f-veh2-scale").value || 100) / 100,
+    vehScale3: (+$("f-veh3-scale").value || 100) / 100,
   };
   document.querySelectorAll("#dyn-fields [data-key]").forEach((el) => {
     s[el.dataset.key] = el.value;
@@ -334,6 +401,7 @@ function layerHitAt(canvas, px, py) {
     if (!L.key) continue;
     let bx, by, bw, bh;
     if (L.type === "cta") { bx = L.x; by = L.y; bw = L.w; bh = L.h; }
+    else if (L.type === "img") { bx = L.x; by = L.y; bw = L.w; bh = L.h; }
     else if (L.type === "text") {
       bw = L.w; bh = L.px * 1.3;
       bx = L.align === "center" ? L.x - bw / 2 : L.align === "right" ? L.x - bw : L.x;
@@ -645,11 +713,20 @@ function startApp(userEmail) {
   wireFileInput("f-bg", (img) => { assets.bg = img; });
   wireFileInput("f-logo", (img) => { assets.logo = img; });
   wireFileInput("f-owaf", (img) => { assets.owaf = img; });
-  wireFileInput("f-overlay", (img) => { assets.overlay = img; });
+  for (let i = 1; i <= 3; i++) {
+    const idx = i - 1;
+    wireFileInput("f-veh" + i, (img) => {
+      assets.vehiclesRaw[idx] = img;
+      delete NUDGE["veh" + i];
+      processVehicles();
+    });
+    $("f-veh" + i + "-scale").addEventListener("input", scheduleRender);
+  }
+  $("f-strip-white").addEventListener("change", processVehicles);
   ["f-branding", "f-logo-align", "f-cta-style",
-   "f-owaf-variant", "f-scrim-mode", "f-ov-pos"].forEach((id) =>
+   "f-owaf-variant", "f-scrim-mode"].forEach((id) =>
     $(id).addEventListener("change", scheduleRender));
-  ["f-scrim", "f-ov-scale"].forEach((id) =>
+  ["f-scrim"].forEach((id) =>
     $(id).addEventListener("input", scheduleRender));
   wireFontInput();
 
