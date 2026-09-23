@@ -196,7 +196,7 @@ function drawBackground(ctx, W, H, assets, opts, fx = 0.5, fy = 0.5, x = 0, y = 
    30/70, trio at 20/50/80 with the middle vehicle larger and in front.
    Each vehicle has its own size (vehScaleN) and can be dragged on the
    preview (NUDGE key "vehN"). */
-function drawOverlayImg(ctx, x, y, w, h) {
+function drawOverlayImg(ctx, x, y, w, h, fit) {
   const vehs = (CUR_ASSETS.vehicles || [])
     .map((img, i) => ({ img, i }))
     .filter((v) => v.img);
@@ -209,9 +209,9 @@ function drawOverlayImg(ctx, x, y, w, h) {
     const v = vehs[oi];
     const key = "veh" + (v.i + 1);
     const scale = (CUR && CUR["vehScale" + (v.i + 1)]) || 1;
-    const baseH = h * (n === 1 ? 1.18 : n === 2 ? 0.85 : 0.72)
+    const baseH = h * (n === 1 ? (fit ? 1 : 1.18) : n === 2 ? 0.85 : 0.72)
       * (n === 3 && oi === 1 ? 1.3 : 1);
-    const r = Math.min((w / n) * 1.4 / v.img.width, baseH / v.img.height) * scale;
+    const r = Math.min((w / n) * (fit ? 1 : 1.4) / v.img.width, baseH / v.img.height) * scale;
     const dw = v.img.width * r, dh = v.img.height * r;
     let cx = x + w * slots[oi];
     let by = y + h;
@@ -1038,28 +1038,16 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
     : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
   if (paid) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
 
+  // shape decides the composition: portrait = stacked story, square =
+  // compact stack, wide = copy column left with the vehicle large on the right
   const portrait = H / W > 1.3;
+  const wide = !portrait && W / H > 1.35;
   const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), h2 = tok(s.h2, s);
+  const cx = wide ? W * 0.3 : W / 2;
+  const colW = wide ? W * 0.46 : W;
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  let y = (paid ? logo.y + logo.h : logo.margin) + logo.margin * (portrait ? 1.6 : 0.9);
-  if (kicker) {
-    const pk = fitText(ctx, kicker.toUpperCase(), W * 0.8, U * 0.037, 600);
-    ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
-    y += pk; ctx.fillText(kicker.toUpperCase(), W / 2, y);
-  }
-  const base1 = portrait ? H * 0.085 : H * 0.12;
-  const p1 = fitText(ctx, h1.toUpperCase(), W * 0.78, base1, 800);
-  ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
-  y += p1 * 1.12; ctx.fillText(h1.toUpperCase(), W / 2, y);
-  const p2 = fitText(ctx, h2.toUpperCase(), W * 0.86, base1 * 1.12, 800);
-  ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
-  y += p2 * 1.02; ctx.fillText(h2.toUpperCase(), W / 2, y);
 
-  // vehicles across the horizon — zone bottom pinned above the lower block
-  const zoneTop = Math.min(y + U * 0.01, H * 0.55);
-  drawOverlayImg(ctx, W * 0.03, zoneTop, W * 0.94, Math.max(H * 0.1, H * 0.64 - zoneTop));
-
-  // brand furniture first, so the lower block can sit safely above it.
+  // brand furniture first, so copy and vehicles can be fitted around it.
   // The sign-off is suppressed here: the dealership already appears in
   // the header and the "at ..." line of this template.
   let fTop;
@@ -1072,26 +1060,72 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
     fTop = H - logo.margin * 1.2;
   }
 
-  // lower block bottom-anchored above the furniture: sub, pill, dealer line
+  // measure the lower block (sub, pill, dealer line) before anything is
+  // drawn, so both the headline stack and the vehicle zone can respect it
   const sub1 = tok(s.sub1, s), pill = tok(s.cta, s), foot = tok(s.foot1, s);
-  const pf = foot ? fitText(ctx, foot, W * 0.7, U * 0.032, 500) : 0;
+  const pf = foot ? fitText(ctx, foot, colW * (wide ? 0.9 : 0.7), U * 0.032, 500) : 0;
   const pp = pill && paid ? U * 0.03 : 0;
-  const ps = sub1 ? fitText(ctx, sub1, W * 0.8, U * 0.042, 600) : 0;
-  let cursor = Math.min(H * (portrait ? 0.84 : 0.815), fTop - U * 0.02);
+  const ps = sub1 ? fitText(ctx, sub1, colW * (wide ? 0.95 : 0.8), U * 0.042, 600) : 0;
+  let cur = Math.min(H * (portrait ? 0.84 : 0.86), fTop - U * 0.02);
+  const footY = foot ? cur : 0; if (foot) cur -= pf * 1.8;
+  const pillY = pp ? cur - pp * 1.05 : 0; if (pp) cur -= pp * 3.05;
+  const subY = sub1 ? cur : 0;
+  const blockTop = sub1 ? subY - ps
+    : pp ? pillY - pp * 1.4
+    : foot ? footY - pf : cur;
+
+  // headline stack, shrunk as a unit when the shape leaves less room
+  let y = wide
+    ? Math.max(logo.margin * 3.2, H * 0.18)
+    : (paid ? logo.y + logo.h : logo.margin) + logo.margin * (portrait ? 1.6 : 0.5);
+  let pk = kicker ? fitText(ctx, kicker.toUpperCase(), colW * 0.86, U * (portrait ? 0.037 : 0.04), 600) : 0;
+  const base1 = portrait ? H * 0.085 : wide ? H * 0.14 : H * 0.08;
+  let p1 = fitText(ctx, h1.toUpperCase(), colW * (wide ? 0.9 : 0.78), base1, 800);
+  let p2 = fitText(ctx, h2.toUpperCase(), colW * (wide ? 0.96 : 0.86), base1 * 1.12, 800);
+  const gap1 = portrait ? 1.12 : 1.08;
+  const stackH = pk + p1 * gap1 + p2 * 1.02;
+  const availH = (portrait ? H * 0.62 : wide ? blockTop - U * 0.02 : Math.min(blockTop, H * 0.62) - U * 0.14) - y;
+  if (stackH > availH && availH > 0) {
+    const k = availH / stackH;
+    pk *= k; p1 *= k; p2 *= k;
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  if (kicker) {
+    ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
+    y += pk; ctx.fillText(kicker.toUpperCase(), cx, y);
+  }
+  ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
+  y += p1 * gap1; ctx.fillText(h1.toUpperCase(), cx, y);
+  ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
+  y += p2 * 1.02; ctx.fillText(h2.toUpperCase(), cx, y);
+
+  // vehicles: portrait/square run across below the headline; wide formats
+  // give the right half of the frame to the vehicle
+  if (wide) {
+    drawOverlayImg(ctx, W * 0.53, H * 0.26, W * 0.44, H * 0.54, true);
+  } else if (portrait) {
+    const zoneTop = Math.min(y + U * 0.01, H * 0.55);
+    const zoneBot = Math.min(H * 0.64, blockTop - U * 0.015);
+    drawOverlayImg(ctx, W * 0.03, zoneTop, W * 0.94, Math.max(H * 0.1, zoneBot - zoneTop));
+  } else {
+    const zoneTop = Math.min(y + U * 0.008, H * 0.55);
+    const zoneBot = blockTop - U * 0.015;
+    drawOverlayImg(ctx, W * 0.05, zoneTop, W * 0.9, Math.max(H * 0.08, zoneBot - zoneTop));
+  }
+
+  // lower block at the positions measured above: sub, pill, dealer line
   if (foot) {
     ctx.font = F(pf, 500); ctx.fillStyle = BRAND.white;
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(foot, W / 2, cursor);
-    cursor -= pf * 1.9;
+    ctx.fillText(foot, cx, footY);
   }
   if (pp) {
-    drawCtaButton(ctx, pill.toUpperCase(), W / 2, cursor - pp * 1.05, pp, BRAND.red, BRAND.white, W * 0.36);
-    cursor -= pp * 3.2;
+    drawCtaButton(ctx, pill.toUpperCase(), cx, pillY, pp, BRAND.red, BRAND.white, colW * (wide ? 0.56 : 0.36));
   }
   if (sub1) {
     ctx.font = F(ps, 600); ctx.fillStyle = BRAND.white;
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(sub1, W / 2, cursor);
+    ctx.fillText(sub1, cx, subY);
   }
 
   if (!paid && s.disclaimer) {
