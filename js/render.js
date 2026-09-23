@@ -209,8 +209,9 @@ function drawOverlayImg(ctx, x, y, w, h, fit) {
     const v = vehs[oi];
     const key = "veh" + (v.i + 1);
     const scale = (CUR && CUR["vehScale" + (v.i + 1)]) || 1;
-    const baseH = h * (n === 1 ? (fit ? 1 : 1.18) : n === 2 ? 0.85 : 0.72)
-      * (n === 3 && oi === 1 ? 1.3 : 1);
+    const baseH = n === 1
+      ? h + (fit ? 0 : ctx.canvas.height * 0.005)
+      : h * (n === 2 ? 0.85 : 0.72) * (n === 3 && oi === 1 ? 1.3 : 1);
     const r = Math.min((w / n) * (fit ? 1 : 1.4) / v.img.width, baseH / v.img.height) * scale;
     const dw = v.img.width * r, dh = v.img.height * r;
     let cx = x + w * slots[oi];
@@ -1096,7 +1097,7 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
   }
   ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
   y += p1 * gap1; ctx.fillText(h1.toUpperCase(), cx, y);
-  ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
+  ctx.font = F(p2, 800); ctx.fillStyle = s.accent || BRAND.red;
   y += p2 * 1.02; ctx.fillText(h2.toUpperCase(), cx, y);
 
   // vehicles: portrait/square run across below the headline; wide formats

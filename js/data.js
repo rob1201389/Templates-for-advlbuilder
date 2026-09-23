@@ -193,6 +193,7 @@ const BRAND = {
 /* Quick-pick accent swatches shown next to the colour picker. */
 const BRAND_SWATCHES = [
   { name: "Toyota Red", hex: BRAND.red },
+  { name: "Hybrid Blue — off-guideline, needs TMCA approval", hex: "#2E64F5" },
   { name: "Black",      hex: BRAND.black },
   { name: "Charcoal",   hex: BRAND.charcoal },
   { name: "Slate",      hex: BRAND.slate },
@@ -215,7 +216,7 @@ const TEMPLATES = [
   {
     id: "rangehero",
     name: "Range hero — centred stack",
-    hint: "Full-bleed image, centred kicker + two-line giant headline (second line red), pill and dealer line under the vehicles.",
+    hint: "Full-bleed image, centred kicker + two-line giant headline (second line in the accent colour), pill and dealer line under the vehicles.",
     defaults: {
       kicker: "Lead the pack in the",
       h1: "NEW", h2: "{MODEL}",

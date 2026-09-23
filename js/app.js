@@ -131,6 +131,7 @@ function readState() {
     price: $("f-price").value.trim(),
     disclaimer: $("f-disclaimer").value.trim(),
     dealerDetails: $("f-dealer-details").value.trim(),
+    accent: $("f-accent").value || "#EB0A1E",
     branding: $("f-branding").value,
     logoAlign: $("f-logo-align").value,
     ctaStyle: $("f-cta-style").value,
