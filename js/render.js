@@ -104,7 +104,7 @@ let CUR = null, CUR_ASSETS = {};
 
 const NUDGE_KEYS = ["h1", "h2", "h3", "sub1", "sub2", "kicker", "giant",
   "offer", "offerLabel", "hashtag", "month", "bar", "tc",
-  "badge1", "badge2", "badge3", "foot1", "foot2"];
+  "badge1", "badge2", "badge3", "foot1", "foot2", "days", "tagline"];
 
 function buildNudgeLookup(s) {
   const m = new Map();
@@ -270,7 +270,7 @@ function drawToyotaLogo(ctx, s, W, H, colour) {
 
 /* Dealer tag header: dealership name as text at the top (15.7). */
 function drawDealerHeader(ctx, s, W, H, logo, colour) {
-  if (!s.dealer || s.branding === "organic") return;
+  if (!s.dealer || s.branding !== "paid") return;
   if (typeof RULES !== "undefined" && !RULES.showDealerHeader) return;
   const px = logo.h * 0.17;
   ctx.save();
@@ -306,6 +306,7 @@ function owafFor(ctx, s, x, y, w, h, surface) {
 function drawBaseFurniture(ctx, s, W, H, logo, opts) {
   opts = opts || {};
   if (s.branding === "organic") return H - logo.margin;
+  const chrome = s.branding === "paid"; // social ads keep disclaimers only
   const inkCol = opts.ink || BRAND.white;
   // on wide formats the furniture takes the opposite side from the copy
   const fAlign = W / H > 1.4 ? oppositeAlign(logo.align) : logo.align;
@@ -326,6 +327,8 @@ function drawBaseFurniture(ctx, s, W, H, logo, opts) {
     ctx.globalAlpha = 1;
     baseY = dy - dp * 0.6;
   }
+
+  if (!chrome) return baseY - logo.h * 0.1;
 
   // OWAF tagline: width 175% of the Toyota logo width
   const owafSurface = opts.surface || null;
@@ -360,17 +363,17 @@ function drawBaseFurniture(ctx, s, W, H, logo, opts) {
 }
 
 /* CTA in one of the three masterbrand styles (14.7/14.17). */
-function drawCtaButton(ctx, text, cx, cy, px, bg, fg, minW = 0) {
-  if (NUDGE.cta) {
-    cx += NUDGE.cta.dx * ctx.canvas.width;
-    cy += NUDGE.cta.dy * ctx.canvas.height;
+function drawCtaButton(ctx, text, cx, cy, px, bg, fg, minW = 0, key = "cta") {
+  if (NUDGE[key]) {
+    cx += NUDGE[key].dx * ctx.canvas.width;
+    cy += NUDGE[key].dy * ctx.canvas.height;
   }
   ctx.font = F(px, 600);
   const tw = ctx.measureText(text).width;
   const w = Math.max(minW, tw + px * 2.2);
   const h = px * 2.1;
   const rect = { x: cx - w / 2, y: cy - h / 2, w, h };
-  if (REC) REC.push({ type: "cta", key: "cta", text, x: rect.x, y: rect.y, w, h, px, bg, fg });
+  if (REC) REC.push({ type: "cta", key, text, x: rect.x, y: rect.y, w, h, px, bg, fg });
   if (SUPPRESS && SUPPRESS.cta) return rect;
   roundRectPath(ctx, rect.x, rect.y, w, h, h / 2);
   ctx.fillStyle = bg; ctx.fill();
@@ -434,10 +437,10 @@ function drawFullBleed(ctx, W, H, s, assets, opts) {
   drawOverlayImg(ctx, 0, H * 0.3, W, H * 0.45);
 
   const logoRect = logoSpec(W, H);
-  const inkTop = s.branding === "organic" ? autoInk(ctx, 0, 0, W, H * 0.3)
+  const inkTop = s.branding !== "paid" ? autoInk(ctx, 0, 0, W, H * 0.3)
     : autoInk(ctx, 0, 0, W, logoRect.h + logoRect.margin * 2);
   let logo = { x: 0, y: logoRect.margin, w: logoRect.w, h: logoRect.h, margin: logoRect.margin, align: s.logoAlign || "right" };
-  if (s.branding !== "organic") {
+  if (s.branding === "paid") {
     logo = drawToyotaLogo(ctx, s, W, H, inkTop);
     drawDealerHeader(ctx, s, W, H, logo, inkTop);
   }
@@ -505,7 +508,7 @@ function drawStrip(ctx, W, H, s, assets, opts) {
   const align = s.logoAlign || "right";
   const lx = align === "left" ? sx + m : align === "centre" ? sx + (sw - spec.w) / 2 : sx + sw - m - spec.w;
   const logo = { x: lx, y: sy + m, w: spec.w, h: spec.h, margin: m, align };
-  if (s.branding !== "organic" && CUR_ASSETS.toyotaLogo) {
+  if (s.branding === "paid" && CUR_ASSETS.toyotaLogo) {
     if (logoVisible()) putImage(ctx, "logo", tinted(CUR_ASSETS.toyotaLogo, ink), logo.x, logo.y, logo.w, logo.h);
     if (s.dealer && (typeof RULES === "undefined" || RULES.showDealerHeader)) {
       const px = logo.h * 0.17;
@@ -555,6 +558,7 @@ function drawStrip(ctx, W, H, s, assets, opts) {
 /* Furniture helper bounded to a horizontal zone (used by strip/offer). */
 function drawBaseFurnitureIn(ctx, s, x0, x1, bottom, logo, surface, ink) {
   if (s.branding === "organic") return bottom - logo.margin;
+  const chrome = s.branding === "paid";
   const anchor = alignAnchor(logo.align, x0, x1);
   let baseY = bottom - logo.margin * 0.6;
   if (s.disclaimer) {
@@ -567,6 +571,7 @@ function drawBaseFurnitureIn(ctx, s, x0, x1, bottom, logo, surface, ink) {
     ctx.globalAlpha = 1;
     baseY = dy - dp * 0.5;
   }
+  if (!chrome) return baseY - logo.h * 0.1;
   let ow = Math.min(logo.w * ((typeof RULES !== "undefined" ? RULES.owafWidthPct : 175) / 100), (x1 - x0) * 0.6);
   const probe = owafFor(ctx, s, 0, 0, 0, 0, surface);
   if (probe) {
@@ -601,10 +606,10 @@ function drawColourBg(ctx, W, H, s, assets, opts) {
   const accent = bg === "white" ? BRAND.red : BRAND.white;
   ctx.fillStyle = fill; ctx.fillRect(0, 0, W, H);
 
-  const logo = s.branding !== "organic"
+  const logo = s.branding === "paid"
     ? drawToyotaLogo(ctx, s, W, H, ink)
     : Object.assign(logoSpec(W, H), { x: 0, y: 0, align: s.logoAlign || "right" });
-  if (s.branding !== "organic") drawDealerHeader(ctx, s, W, H, logo, ink);
+  if (s.branding === "paid") drawDealerHeader(ctx, s, W, H, logo, ink);
   const anchor = alignAnchor(logo.align, logo.margin, W - logo.margin);
   const maxW = W - logo.margin * 2;
 
@@ -650,14 +655,14 @@ function drawColourBg(ctx, W, H, s, assets, opts) {
    carries the sign-off and OWAF (after 14.8 / 15.7 examples). */
 function drawOffer(ctx, W, H, s, assets, opts) {
   ctx.fillStyle = BRAND.white; ctx.fillRect(0, 0, W, H);
-  const logo = s.branding !== "organic"
+  const logo = s.branding === "paid"
     ? drawToyotaLogo(ctx, s, W, H, BRAND.black)
     : Object.assign(logoSpec(W, H), { x: 0, y: 0, align: s.logoAlign || "right" });
-  if (s.branding !== "organic") drawDealerHeader(ctx, s, W, H, logo, BRAND.black);
+  if (s.branding === "paid") drawDealerHeader(ctx, s, W, H, logo, BRAND.black);
   const anchor = alignAnchor(logo.align, logo.margin, W - logo.margin);
   const maxW = W - logo.margin * 2;
 
-  const stripH = s.branding === "organic" ? 0 : Math.max(H * 0.085, logo.h * 0.62);
+  const stripH = s.branding !== "paid" ? 0 : Math.max(H * 0.085, logo.h * 0.62);
   const stripY = H - stripH;
 
   let y = logo.y + logo.h + logo.margin * 1.3;
@@ -770,10 +775,10 @@ function drawSpotlight(ctx, W, H, s, assets, opts) {
   }
   ctx.restore();
 
-  const logo = s.branding !== "organic"
+  const logo = s.branding === "paid"
     ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
     : Object.assign(logoSpec(W, H), { x: 0, y: 0, align: s.logoAlign || "right" });
-  if (s.branding !== "organic") drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+  if (s.branding === "paid") drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
 
   const kicker = tok(s.kicker, s), giant = (tok(s.giant, s) || "").toUpperCase();
   const sub1 = tok(s.sub1, s);
@@ -861,7 +866,7 @@ function drawEvent(ctx, W, H, s, assets, opts) {
     });
   }
 
-  const logo = s.branding !== "organic"
+  const logo = s.branding === "paid"
     ? drawToyotaLogo(ctx, s, W, H, autoInk(ctx, 0, 0, W, logoSpec(W, H).h * 2))
     : Object.assign(logoSpec(W, H), { x: 0, y: 0, align: s.logoAlign || "right" });
 
@@ -925,14 +930,14 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     const logoH = H * 0.168, margin = H * 0.048;
     const photoH = H * 0.42;
     drawBackground(ctx, W, H, assets, opts && { hint: false }, 0.5, 0.45, 0, 0, W, photoH);
-    if (logoImg && logoVisible()) {
+    if (s.branding === "paid" && logoImg && logoVisible()) {
       const lw = logoH * 1.245;
       putImage(ctx, "logo", tinted(logoImg, autoInk(ctx, W - margin - lw, margin, lw, logoH)),
         W - margin - lw, margin, lw, logoH);
     }
     let y = photoH + margin;
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    if (s.dealer) {
+    if (s.branding === "paid" && s.dealer) {
       const dp = H * 0.045;
       ctx.font = F(dp, 600); ctx.fillStyle = BRAND.black;
       y += dp; ctx.fillText(s.dealer, margin, y);
@@ -949,7 +954,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     }
     drawCtaButton(ctx, cta.toUpperCase(), margin + W * 0.24, H - margin - H * 0.055,
       H * 0.045, BRAND.red, BRAND.white, W * 0.42);
-    const owaf = CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
+    const owaf = s.branding === "paid" && CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
     if (owaf) {
       const ow = W * 0.3, oh = ow * (owaf.height / owaf.width);
       putImage(ctx, "owaf", owaf, W - margin - ow, H - margin - oh - (oh > H * 0.09 ? 0 : H * 0.02), ow, oh);
@@ -961,7 +966,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     drawBackground(ctx, W, H, assets, opts && { hint: false }, 0.5, 0.5, 0, 0, photoW, H);
     let x = photoW + margin;
     ctx.textBaseline = "middle"; ctx.textAlign = "left";
-    if (s.dealer) {
+    if (s.branding === "paid" && s.dealer) {
       const dp = H * 0.16;
       ctx.font = F(dp, 600); ctx.fillStyle = BRAND.black;
       ctx.fillText(s.dealer, x, H * 0.24);
@@ -970,12 +975,12 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     ctx.font = F(hp, 800); ctx.fillStyle = BRAND.black;
     ctx.fillText(h1, x, s.dealer ? H * 0.66 : H * 0.5);
     let rx = W - margin;
-    if (logoImg && logoVisible()) {
+    if (s.branding === "paid" && logoImg && logoVisible()) {
       const lw = logoH * 1.245;
       putImage(ctx, "logo", tinted(logoImg, BRAND.black), W - margin - lw, (H - logoH) / 2, lw, logoH);
       rx = W - margin - lw - margin;
     }
-    const owaf = CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
+    const owaf = s.branding === "paid" && CUR_ASSETS.owafPack && CUR_ASSETS.owafPack.red;
     if (owaf) {
       const oh = H * 0.2, ow = oh * (owaf.width / owaf.height);
       putImage(ctx, "owaf", owaf, rx - ow, (H - oh) / 2, ow, oh);
@@ -1033,11 +1038,11 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
   tg.addColorStop(0, "rgba(2,10,14,0.5)"); tg.addColorStop(1, "rgba(2,10,14,0)");
   ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H * 0.34);
 
-  const paid = s.branding !== "organic";
-  const logo = paid
+  const chrome = s.branding === "paid";
+  const logo = chrome
     ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
     : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
-  if (paid) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+  if (chrome) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
 
   // shape decides the composition: portrait = stacked story, square =
   // compact stack, wide = copy column left with the vehicle large on the right
@@ -1052,20 +1057,30 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
   // The sign-off is suppressed here: the dealership already appears in
   // the header and the "at ..." line of this template.
   let fTop;
-  if (paid) {
+  if (chrome) {
     const keep = RULES.showSignOff;
     RULES.showSignOff = false;
     fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
     RULES.showSignOff = keep;
   } else {
     fTop = H - logo.margin * 1.2;
+    if (s.disclaimer) {
+      const dp = Math.max(9, U * 0.016);
+      ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      const lines = wrapText(ctx, s.disclaimer, W * 0.86);
+      let dy = H - logo.margin * 0.6;
+      for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.35; }
+      ctx.globalAlpha = 1;
+      fTop = Math.min(fTop, dy);
+    }
   }
 
   // measure the lower block (sub, pill, dealer line) before anything is
   // drawn, so both the headline stack and the vehicle zone can respect it
   const sub1 = tok(s.sub1, s), pill = tok(s.cta, s), foot = tok(s.foot1, s);
   const pf = foot ? fitText(ctx, foot, colW * (wide ? 0.9 : 0.7), U * 0.032, 500) : 0;
-  const pp = pill && paid ? U * 0.03 : 0;
+  const pp = pill && s.branding !== "organic" ? U * 0.03 : 0;
   const ps = sub1 ? fitText(ctx, sub1, colW * (wide ? 0.95 : 0.8), U * 0.042, 600) : 0;
   let cur = Math.min(H * (portrait ? 0.84 : 0.86), fTop - U * 0.02);
   const footY = foot ? cur : 0; if (foot) cur -= pf * 1.8;
@@ -1078,7 +1093,7 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
   // headline stack, shrunk as a unit when the shape leaves less room
   let y = wide
     ? Math.max(logo.margin * 3.2, H * 0.18)
-    : (paid ? logo.y + logo.h : logo.margin) + logo.margin * (portrait ? 1.6 : 0.5);
+    : (chrome ? logo.y + logo.h : logo.margin) + logo.margin * (portrait ? 1.6 : 0.5);
   let pk = kicker ? fitText(ctx, kicker.toUpperCase(), colW * 0.86, U * (portrait ? 0.037 : 0.04), 600) : 0;
   const base1 = portrait ? H * 0.085 : wide ? H * 0.14 : H * 0.08;
   let p1 = fitText(ctx, h1.toUpperCase(), colW * (wide ? 0.9 : 0.78), base1, 800);
@@ -1129,14 +1144,327 @@ function drawRangeHero(ctx, W, H, s, assets, opts) {
     ctx.fillText(sub1, cx, subY);
   }
 
-  if (!paid && s.disclaimer) {
-    const dp = Math.max(9, U * 0.016);
-    ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
-    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-    const lines = wrapText(ctx, s.disclaimer, W * 0.86);
-    let dy = H - logo.margin * 0.6;
-    for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.35; }
-    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic";
+}
+
+/* 8. Big word lineup (after dealer "Electrify"-style ads): giant
+   accent-colour display word over the photo, vehicles across the
+   middle, white base panel with black headline, sub-copy and pill. */
+function drawLineup(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  const chrome = s.branding === "paid";
+  const wide = W / H > 1.35;
+  const panelH = H * (wide ? 0.42 : 0.35);
+  const panelY = H - panelH;
+
+  if (assets.bg) {
+    drawBackground(ctx, W, H, assets, opts, 0.5, 0.4, 0, 0, W, panelY);
+  } else {
+    // showroom-at-dusk fallback: cool dark stage, warm glow above the panel
+    const g = ctx.createLinearGradient(0, 0, W, panelY);
+    g.addColorStop(0, "#252b34"); g.addColorStop(0.6, "#141922"); g.addColorStop(1, "#0a0e14");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, panelY);
+    const gl = ctx.createLinearGradient(0, panelY - H * 0.2, 0, panelY);
+    gl.addColorStop(0, "rgba(255,185,115,0)"); gl.addColorStop(1, "rgba(255,195,125,0.25)");
+    ctx.fillStyle = gl; ctx.fillRect(0, panelY - H * 0.2, W, H * 0.2);
+    if (CUR && CUR.scrimMode && CUR.scrimMode !== "none" && CUR.scrim > 0) {
+      ctx.fillStyle = CUR.scrimMode === "light"
+        ? `rgba(255,255,255,${CUR.scrim})` : `rgba(0,0,0,${CUR.scrim})`;
+      ctx.fillRect(0, 0, W, panelY);
+    }
+  }
+  const tg = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+  tg.addColorStop(0, "rgba(3,7,13,0.6)"); tg.addColorStop(1, "rgba(3,7,13,0)");
+  ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H * 0.5);
+
+  const logo = chrome
+    ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
+    : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
+  if (chrome) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+
+  const kicker = tok(s.kicker, s), giant = (tok(s.giant, s) || "").toUpperCase();
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let y = chrome ? logo.y + logo.h + logo.margin * 0.6 : logo.margin * (wide ? 1.1 : 2);
+  if (kicker) {
+    const pk = fitText(ctx, kicker.toUpperCase(), W * 0.8, U * 0.034, 600);
+    ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
+    y += pk; ctx.fillText(kicker.toUpperCase(), W / 2, y);
+    y += pk * 0.45;
+  }
+  if (giant) {
+    const pg = fitText(ctx, giant, W * 0.95, H * (wide ? 0.28 : 0.155), 800);
+    ctx.font = F(pg, 800); ctx.fillStyle = s.accent || BRAND.red;
+    y += pg; ctx.fillText(giant, W / 2, y);
+  }
+
+  // white base panel first; vehicles overlap its top edge (in front)
+  ctx.fillStyle = BRAND.white; ctx.fillRect(0, panelY, W, panelH);
+  const zTop = Math.min(y + U * 0.005, panelY - H * 0.08);
+  drawOverlayImg(ctx, W * 0.02, zTop, W * 0.96, panelY + H * 0.02 - zTop);
+
+  // panel copy above the furniture / small print
+  let fTop;
+  if (chrome) {
+    fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.black, surface: "light" });
+  } else {
+    fTop = H - U * 0.03;
+    if (s.disclaimer) {
+      const dp = Math.max(8, U * 0.014);
+      ctx.font = F(dp, 400); ctx.fillStyle = "#6b7280";
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      const lines = wrapText(ctx, s.disclaimer, W * 0.9);
+      let dy = H - U * 0.02;
+      for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.3; }
+      fTop = dy;
+    }
+  }
+  const h1 = tok(s.h1, s), sub1 = tok(s.sub1, s), cta = tok(s.cta, s);
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let py = panelY + panelH * 0.05;
+  if (h1) {
+    const p1 = fitText(ctx, h1.toUpperCase(), W * 0.9, Math.min(panelH * 0.26, H * 0.075), 800);
+    ctx.font = F(p1, 800); ctx.fillStyle = BRAND.black;
+    py += p1 * 1.15; ctx.fillText(h1.toUpperCase(), W / 2, py);
+  }
+  if (sub1) {
+    const ps = Math.min(U * 0.028, panelH * 0.1);
+    ctx.font = F(ps, 600); ctx.fillStyle = "#374151";
+    const lines = wrapText(ctx, sub1.toUpperCase(), W * 0.84);
+    py += ps * 0.7;
+    for (const ln of lines) { py += ps * 1.35; ctx.fillText(ln, W / 2, py); }
+  }
+  if (cta && s.branding !== "organic") {
+    const pp = Math.min(U * 0.028, panelH * 0.1);
+    const cy = Math.min(Math.max(py + pp * 2.3, panelY + panelH * 0.7), fTop - pp * 1.4);
+    drawCtaButton(ctx, cta.toUpperCase(), W / 2, cy, pp, s.accent || BRAND.red, BRAND.white, W * 0.3);
+  }
+}
+
+/* 9. Sale burst (after "3 Day Sale" dealer ads): night-sky fireworks
+   backdrop, plate line, giant save line, white day-count block,
+   vehicles and event name. */
+function fireworkBurst(ctx, cx, cy, r, col) {
+  ctx.save();
+  ctx.strokeStyle = col; ctx.fillStyle = col;
+  ctx.lineWidth = Math.max(1, r * 0.018);
+  const n = 24;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.sin(cx + i) * 0.05;
+    const rr = r * (0.55 + 0.45 * Math.abs(Math.sin(i * 12.9898 + cx * 0.01)));
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * rr * 0.3, cy + Math.sin(a) * rr * 0.3);
+    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, Math.max(0.6, r * 0.022), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSaleBurst(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  const chrome = s.branding === "paid";
+  const wide = W / H > 1.35;
+  if (assets.bg) drawBackground(ctx, W, H, assets, opts, 0.5, 0.4);
+  else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#04070f"); g.addColorStop(0.55, "#0a1026"); g.addColorStop(1, "#05070e");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    [[0.1, 0.09, 0.17, "#ff5a4e"], [0.88, 0.07, 0.2, "#ffc24d"],
+     [0.5, 0.05, 0.11, "#8fb0ff"], [0.97, 0.32, 0.1, "#ff8bd6"],
+     [0.03, 0.34, 0.09, "#9be7ff"]].forEach(([x, yy, r, c]) =>
+      fireworkBurst(ctx, W * x, H * yy, U * r, c));
+    if (CUR && CUR.scrimMode && CUR.scrimMode !== "none" && CUR.scrim > 0) {
+      ctx.fillStyle = CUR.scrimMode === "light"
+        ? `rgba(255,255,255,${CUR.scrim})` : `rgba(0,0,0,${CUR.scrim})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  const logo = chrome ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
+    : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
+  if (chrome) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+
+  // base furniture / social small print, measured first
+  let fTop;
+  if (chrome) {
+    fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
+  } else {
+    fTop = H - logo.margin;
+    if (s.disclaimer) {
+      const dp = Math.max(9, U * 0.015);
+      ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      const lines = wrapText(ctx, s.disclaimer, W * 0.88);
+      let dy = H - logo.margin * 0.5;
+      for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.35; }
+      ctx.globalAlpha = 1;
+      fTop = dy;
+    }
+  }
+
+  const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), sub1 = tok(s.sub1, s);
+  const cta = tok(s.cta, s), days = String(s.days || "").trim();
+  const ctaOn = cta && s.branding !== "organic";
+
+  // bottom block positions (event name + pill), bottom-anchored
+  const pp = U * 0.028, ps = sub1 ? U * 0.05 : 0;
+  let bot = Math.min(H * 0.92, fTop - U * 0.015);
+  const ctaY = ctaOn ? bot - pp * 1.05 : 0; if (ctaOn) bot -= pp * 3.1;
+  const subY = sub1 ? bot : 0; if (sub1) bot -= ps * 1.5;
+
+  // top stack
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let y = (chrome ? logo.y + logo.h + logo.margin * 0.4 : logo.margin * (wide ? 1 : 1.8));
+  if (kicker) {
+    const pk = fitText(ctx, kicker.toUpperCase(), W * 0.7, U * (wide ? 0.06 : 0.047), 700);
+    ctx.font = F(pk, 700); ctx.fillStyle = BRAND.white;
+    y += pk; ctx.fillText(kicker.toUpperCase(), W / 2, y);
+    y += pk * 0.35;
+  }
+  if (h1) {
+    const p1 = fitText(ctx, h1.toUpperCase(), W * 0.94, H * (wide ? 0.17 : 0.082), 800);
+    ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
+    y += p1; ctx.fillText(h1.toUpperCase(), W / 2, y);
+  }
+
+  // day-count block: white square with the number + stacked label words
+  if (days) {
+    const side = U * (wide ? 0.24 : 0.21);
+    const words = (tok(s.h2, s) || "").toUpperCase().split(/\s+/).filter(Boolean);
+    const lp = side * 0.4;
+    ctx.font = F(lp, 800);
+    const lw = words.length ? Math.max(...words.map((w) => ctx.measureText(w).width)) : 0;
+    const gap = side * 0.14;
+    const total = side + (lw ? gap + lw : 0);
+    let bx = W / 2 - total / 2 + side / 2;
+    let by = y + U * 0.02 + side / 2;
+    if (NUDGE.days) { bx += NUDGE.days.dx * W; by += NUDGE.days.dy * H; }
+    const rect = { x: bx - side / 2, y: by - side / 2, w: side, h: side };
+    if (REC) REC.push({ type: "cta", key: "days", text: days, x: rect.x, y: rect.y, w: side, h: side, px: side * 0.6, bg: BRAND.white, fg: BRAND.black });
+    if (!(SUPPRESS && SUPPRESS.cta)) {
+      ctx.fillStyle = BRAND.white; ctx.fillRect(rect.x, rect.y, side, side);
+      ctx.fillStyle = BRAND.black; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = F(side * 0.72, 800);
+      (ctx.__origFillText || ctx.fillText.bind(ctx))(days, bx, by + side * 0.03);
+    }
+    if (words.length) {
+      ctx.fillStyle = BRAND.white; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.font = F(lp, 800);
+      const lh = lp * 1.02;
+      let ly = by - ((words.length - 1) * lh) / 2 + lp * 0.36;
+      for (const w of words) { ctx.fillText(w, rect.x + side + gap, ly); ly += lh; }
+    }
+    y = rect.y + side;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  }
+
+  // vehicles between the day block and the event name
+  const zTop = Math.min(y + U * 0.015, H * 0.68);
+  const zBot = sub1 ? subY - ps * 1.15 : ctaOn ? ctaY - pp * 1.7 : fTop - U * 0.01;
+  drawOverlayImg(ctx, W * 0.03, zTop, W * 0.94, Math.max(H * 0.07, zBot - zTop));
+
+  if (sub1) {
+    const p = fitText(ctx, sub1.toUpperCase(), W * 0.92, ps, 800);
+    ctx.font = F(p, 800); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.95;
+    ctx.fillText(sub1.toUpperCase(), W / 2, subY);
+    ctx.globalAlpha = 1;
+  }
+  if (ctaOn) {
+    drawCtaButton(ctx, cta.toUpperCase(), W / 2, ctaY, pp, BRAND.white, BRAND.black, W * 0.28);
+  }
+}
+
+/* 10. Price pill offer (after bZ4X deposit-bonus story ads): photo
+   background, left-aligned offer headline, vehicle, accent price pill
+   with driveaway tag, optional CTA pill. */
+function drawPriceTag(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  const chrome = s.branding === "paid";
+  const wide = W / H > 1.35;
+  drawBackground(ctx, W, H, assets, opts && { hint: false }, 0.5, 0.45);
+  const tg = ctx.createLinearGradient(0, 0, 0, H);
+  tg.addColorStop(0, "rgba(8,10,14,0.5)"); tg.addColorStop(0.45, "rgba(8,10,14,0.12)"); tg.addColorStop(1, "rgba(8,10,14,0.5)");
+  ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H);
+
+  const logo = chrome ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
+    : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
+  if (chrome) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+
+  const mx = W * 0.07;
+  const colW = W * (wide ? 0.46 : 0.86);
+  const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), tag = tok(s.tagline, s), cta = tok(s.cta, s);
+
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  let y = (chrome ? logo.y + logo.h : logo.margin) + logo.margin * (wide ? 0.7 : 1.1);
+  if (kicker) {
+    const pk = fitText(ctx, kicker, colW, U * 0.034, 600);
+    ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
+    y += pk; ctx.fillText(kicker, mx, y);
+    y += pk * 0.35;
+  }
+  if (h1) {
+    let p1 = U * (wide ? 0.1 : 0.088);
+    ctx.font = F(p1, 800);
+    let lines = wrapText(ctx, h1, colW);
+    if (lines.length > 2) { p1 *= 0.85; ctx.font = F(p1, 800); lines = wrapText(ctx, h1, colW); }
+    ctx.fillStyle = BRAND.white;
+    for (const ln of lines) { y += p1 * 1.06; ctx.fillText(ln, mx, y); }
+  }
+
+  let fTop;
+  if (chrome) {
+    fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
+  } else {
+    fTop = H - logo.margin;
+    if (s.disclaimer) {
+      const dp = Math.max(8, U * 0.014);
+      ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.8;
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      const lines = wrapText(ctx, s.disclaimer, W * 0.86);
+      let dy = H - logo.margin * 0.5;
+      for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], mx, dy); dy -= dp * 1.3; }
+      ctx.globalAlpha = 1;
+      fTop = dy;
+    }
+  }
+
+  const ctaOn = cta && s.branding !== "organic";
+  const pillPx = U * 0.036, cp = U * 0.026;
+  const rowY = Math.min(H * (wide ? 0.8 : 0.78), fTop - pillPx * (ctaOn ? 4.4 : 1.6));
+
+  // vehicle: right half on wide, centred band otherwise
+  if (wide) {
+    drawOverlayImg(ctx, W * 0.5, H * 0.24, W * 0.46, H * 0.58, true);
+  } else {
+    const zTop = Math.min(y + U * 0.01, H * 0.55);
+    drawOverlayImg(ctx, W * 0.04, zTop, W * 0.92, Math.max(H * 0.08, rowY - pillPx * 2 - zTop));
+  }
+
+  // price pill + stacked driveaway tag
+  let tx = mx;
+  if (s.price) {
+    ctx.font = F(pillPx, 700);
+    const pw = Math.max(W * 0.2, ctx.measureText(s.price).width + pillPx * 2.4);
+    drawCtaButton(ctx, s.price, mx + pw / 2, rowY, pillPx, s.accent || BRAND.red, BRAND.white, pw, "price");
+    tx = mx + pw + U * 0.028;
+  }
+  if (tag) {
+    const words = tag.toUpperCase().split(/\s+/).filter(Boolean);
+    const tp = pillPx * 0.82;
+    ctx.font = F(tp, 800); ctx.fillStyle = BRAND.white;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    const lh = tp * 1.04;
+    let ty = rowY - ((words.length - 1) * lh) / 2 + tp * 0.36;
+    for (const w of words) { ctx.fillText(w, tx, ty); ty += lh; }
+  }
+  if (ctaOn) {
+    ctx.font = F(cp, 600);
+    const cw = Math.max(W * 0.22, ctx.measureText(cta.toUpperCase()).width + cp * 2.2);
+    drawCtaButton(ctx, cta.toUpperCase(), mx + cw / 2, Math.min(rowY + pillPx * 3.2, fTop - cp * 1.4),
+      cp, BRAND.white, BRAND.black, cw);
   }
 }
 
@@ -1148,6 +1476,9 @@ const TEMPLATE_RENDERERS = {
   offer: drawOffer,
   spotlight: drawSpotlight,
   event: drawEvent,
+  lineup: drawLineup,
+  saleburst: drawSaleBurst,
+  pricetag: drawPriceTag,
 };
 
 function renderAd(canvas, size, templateId, state, assets, opts = {}) {

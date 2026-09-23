@@ -267,6 +267,7 @@ const FIELD_LABELS = {
   offer: "Offer value", offerLabel: "Offer label",
   foot1: "Footer line 1", foot2: "Footer line 2",
   kicker: "Kicker line", giant: "Giant display word", bar: "Offer bar text",
+  days: "Big number (day count)",
 };
 
 function buildTemplatePicker() {

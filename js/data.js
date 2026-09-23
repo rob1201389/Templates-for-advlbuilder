@@ -118,7 +118,7 @@ const RULE_BOOK = [
   {
     group: "Social media",
     items: [
-      { locked: true, text: "Organic image posts carry NO branding (reference the brand in copy). Paid placements carry the full furniture — that's the Branding toggle in panel 4." },
+      { locked: true, text: "Branding toggle (panel 4): Social ad = no Toyota logo, OWAF or dealer tags (copy, price and CTAs stay — the dealer social style). Masterbrand = full furniture for print/paid brand placements. Organic = imagery only, no CTA (17.3/17.4)." },
       { locked: true, text: "Feed creative 1:1, stories 9:16, images under 20% text where placements require it. Display picture: white Toyota vertical logo on a black circle." },
     ],
   },
@@ -288,6 +288,42 @@ const TEMPLATES = [
       badge1: "3 DAYS", badge2: "ONLY",
       hashtag: "#LandABetterDeal",
       cta: "Book now",
+    },
+  },
+  {
+    id: "lineup",
+    name: "Big word — showroom lineup",
+    hint: "Giant accent-colour word over the photo, up to 3 vehicles, white base panel with black headline and pill CTA.",
+    defaults: {
+      kicker: "{DEALER}",
+      giant: "Electrify",
+      h1: "Your drive now",
+      sub1: "30+ electrified Toyotas ready for immediate delivery.",
+      cta: "Enquire now",
+    },
+  },
+  {
+    id: "saleburst",
+    name: "Sale burst — day count",
+    hint: "Night-sky fireworks backdrop, giant save line, white day-count block, vehicle and event name. Built for weekend sales.",
+    defaults: {
+      kicker: "2025 plate",
+      h1: "Save {PRICE}",
+      days: "3",
+      h2: "Day sale",
+      sub1: "This weekend only",
+      cta: "Shop now",
+    },
+  },
+  {
+    id: "pricetag",
+    name: "Price pill — offer story",
+    hint: "Photo background, left-aligned offer headline, vehicle, accent price pill with driveaway tag and CTA.",
+    defaults: {
+      kicker: "All-new {MODEL} {GRADE}",
+      h1: "$5,000 Deposit Bonus^",
+      tagline: "Drive away",
+      cta: "See details",
     },
   },
 ];
