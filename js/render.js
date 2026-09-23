@@ -104,7 +104,7 @@ let CUR = null, CUR_ASSETS = {};
 
 const NUDGE_KEYS = ["h1", "h2", "h3", "sub1", "sub2", "kicker", "giant",
   "offer", "offerLabel", "hashtag", "month", "bar", "tc",
-  "badge1", "badge2", "badge3"];
+  "badge1", "badge2", "badge3", "foot1", "foot2"];
 
 function buildNudgeLookup(s) {
   const m = new Map();
@@ -232,9 +232,13 @@ function oppositeAlign(a) {
 }
 
 /* Toyota Product vertical logo (mandatory, paid comms). */
+function logoVisible() {
+  return typeof RULES === "undefined" || RULES.showToyotaLogo !== false;
+}
+
 function drawToyotaLogo(ctx, s, W, H, colour) {
   const spec = logoSpec(W, H);
-  const img = CUR_ASSETS.toyotaLogo;
+  const img = logoVisible() ? CUR_ASSETS.toyotaLogo : null;
   const align = s.logoAlign || "right";
   const x = align === "left" ? spec.margin
     : align === "centre" ? (W - spec.w) / 2
@@ -482,7 +486,7 @@ function drawStrip(ctx, W, H, s, assets, opts) {
   const lx = align === "left" ? sx + m : align === "centre" ? sx + (sw - spec.w) / 2 : sx + sw - m - spec.w;
   const logo = { x: lx, y: sy + m, w: spec.w, h: spec.h, margin: m, align };
   if (s.branding !== "organic" && CUR_ASSETS.toyotaLogo) {
-    putImage(ctx, "logo", tinted(CUR_ASSETS.toyotaLogo, ink), logo.x, logo.y, logo.w, logo.h);
+    if (logoVisible()) putImage(ctx, "logo", tinted(CUR_ASSETS.toyotaLogo, ink), logo.x, logo.y, logo.w, logo.h);
     if (s.dealer && (typeof RULES === "undefined" || RULES.showDealerHeader)) {
       const px = logo.h * 0.17;
       ctx.font = F(px, 600); ctx.fillStyle = ink; ctx.textBaseline = "top";
@@ -901,7 +905,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     const logoH = H * 0.168, margin = H * 0.048;
     const photoH = H * 0.42;
     drawBackground(ctx, W, H, assets, opts && { hint: false }, 0.5, 0.45, 0, 0, W, photoH);
-    if (logoImg) {
+    if (logoImg && logoVisible()) {
       const lw = logoH * 1.245;
       putImage(ctx, "logo", tinted(logoImg, autoInk(ctx, W - margin - lw, margin, lw, logoH)),
         W - margin - lw, margin, lw, logoH);
@@ -946,7 +950,7 @@ function drawMicro(ctx, W, H, s, assets, opts) {
     ctx.font = F(hp, 800); ctx.fillStyle = BRAND.black;
     ctx.fillText(h1, x, s.dealer ? H * 0.66 : H * 0.5);
     let rx = W - margin;
-    if (logoImg) {
+    if (logoImg && logoVisible()) {
       const lw = logoH * 1.245;
       putImage(ctx, "logo", tinted(logoImg, BRAND.black), W - margin - lw, (H - logoH) / 2, lw, logoH);
       rx = W - margin - lw - margin;
@@ -970,8 +974,108 @@ function drawMicro(ctx, W, H, s, assets, opts) {
   }
 }
 
+
+/* Range hero — full-bleed centred stack: kicker, giant line 1 (white),
+   giant line 2 (red), vehicles across the horizon, sentence sub-line,
+   red pill and dealer line beneath. Built-in dusk backdrop when no
+   photo is loaded. */
+function drawRangeHero(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  if (assets.bg) {
+    drawBackground(ctx, W, H, assets, opts, 0.5, 0.55);
+  } else {
+    // dusk stage: deep teal sky, warm horizon, dark ground
+    const horizon = H * 0.66;
+    let g = ctx.createLinearGradient(0, 0, 0, horizon);
+    g.addColorStop(0, "#04161d");
+    g.addColorStop(0.55, "#0b2e38");
+    g.addColorStop(0.85, "#6b4a2a");
+    g.addColorStop(1, "#d78b3c");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizon);
+    const sun = ctx.createRadialGradient(W / 2, horizon, 0, W / 2, horizon, W * 0.45);
+    sun.addColorStop(0, "rgba(255,190,110,0.75)");
+    sun.addColorStop(0.35, "rgba(255,160,80,0.25)");
+    sun.addColorStop(1, "rgba(255,160,80,0)");
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, W, horizon);
+    g = ctx.createLinearGradient(0, horizon, 0, H);
+    g.addColorStop(0, "#3a2b20");
+    g.addColorStop(0.25, "#241a13");
+    g.addColorStop(1, "#120d0a");
+    ctx.fillStyle = g; ctx.fillRect(0, horizon, W, H - horizon);
+    if (CUR && CUR.scrimMode && CUR.scrimMode !== "none" && CUR.scrim > 0) {
+      ctx.fillStyle = CUR.scrimMode === "light"
+        ? `rgba(255,255,255,${CUR.scrim})` : `rgba(0,0,0,${CUR.scrim})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  // top scrim for headline legibility
+  const tg = ctx.createLinearGradient(0, 0, 0, H * 0.34);
+  tg.addColorStop(0, "rgba(2,10,14,0.5)"); tg.addColorStop(1, "rgba(2,10,14,0)");
+  ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H * 0.34);
+
+  const paid = s.branding !== "organic";
+  const logo = paid
+    ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
+    : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
+  if (paid) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+
+  const portrait = H / W > 1.3;
+  const kicker = tok(s.kicker, s), h1 = tok(s.h1, s), h2 = tok(s.h2, s);
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let y = (paid ? logo.y + logo.h : logo.margin) + logo.margin * (portrait ? 1.6 : 0.9);
+  if (kicker) {
+    const pk = fitText(ctx, kicker.toUpperCase(), W * 0.8, U * 0.037, 600);
+    ctx.font = F(pk, 600); ctx.fillStyle = BRAND.white;
+    y += pk; ctx.fillText(kicker.toUpperCase(), W / 2, y);
+  }
+  const base1 = portrait ? H * 0.085 : H * 0.14;
+  const p1 = fitText(ctx, h1.toUpperCase(), W * 0.78, base1, 800);
+  ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
+  y += p1 * 1.12; ctx.fillText(h1.toUpperCase(), W / 2, y);
+  const p2 = fitText(ctx, h2.toUpperCase(), W * 0.86, base1 * 1.12, 800);
+  ctx.font = F(p2, 800); ctx.fillStyle = BRAND.red;
+  y += p2 * 1.02; ctx.fillText(h2.toUpperCase(), W / 2, y);
+
+  // vehicles across the horizon
+  drawOverlayImg(ctx, W * 0.03, y + U * 0.01, W * 0.94, Math.max(U * 0.14, H * 0.66 - y));
+
+  // lower block: sub-line, red pill, dealer line
+  let ly = H * (portrait ? 0.72 : 0.70);
+  const sub1 = tok(s.sub1, s), pill = tok(s.cta, s), foot = tok(s.foot1, s);
+  if (sub1) {
+    const ps = fitText(ctx, sub1, W * 0.8, U * 0.042, 600);
+    ctx.font = F(ps, 600); ctx.fillStyle = BRAND.white;
+    ctx.fillText(sub1, W / 2, ly);
+    ly += ps * 1.9;
+  }
+  if (pill && paid) {
+    const pp = U * 0.03;
+    drawCtaButton(ctx, pill.toUpperCase(), W / 2, ly, pp, BRAND.red, BRAND.white, W * 0.36);
+    ly += pp * 3.1;
+  }
+  if (foot) {
+    const pf = fitText(ctx, foot, W * 0.7, U * 0.032, 500);
+    ctx.font = F(pf, 500); ctx.fillStyle = BRAND.white;
+    ctx.textAlign = "center";
+    ctx.fillText(foot, W / 2, ly);
+  }
+
+  if (paid) {
+    drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
+  } else if (s.disclaimer) {
+    const dp = Math.max(9, U * 0.016);
+    ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    const lines = wrapText(ctx, s.disclaimer, W * 0.86);
+    let dy = H - logo.margin * 0.6;
+    for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.35; }
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic";
+  }
+}
+
 const TEMPLATE_RENDERERS = {
   fullbleed: drawFullBleed,
+  rangehero: drawRangeHero,
   strip: drawStrip,
   colourbg: drawColourBg,
   offer: drawOffer,

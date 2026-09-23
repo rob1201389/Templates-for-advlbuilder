@@ -9,7 +9,7 @@
    layer (e.g. Cloudflare Access, which verifies each user's email
    before the page loads). The app then skips its own browser-stored
    login screen, since the portal has already authenticated the user. */
-const PORTAL_MODE = false;
+const PORTAL_MODE = true; // login disabled for now (set false to restore it)
 
 /* Dealerships selectable in every template. "Other…" in the app lets
    users type and save additional names. */
@@ -51,6 +51,7 @@ const RULES_DEFAULTS = {
   logoScale: 1.0,       // multiplier on the spec logo size
   marginScale: 1.0,     // 1.0 = margins at 40% of logo height
   owafWidthPct: 175,    // OWAF width as % of Toyota logo width
+  showToyotaLogo: true, // untick to output artwork without the logo
   showDealerHeader: true,
   showSignOff: true,
 };
@@ -66,6 +67,8 @@ const RULE_BOOK = [
       { locked: true, text: "The Toyota Product VERTICAL logo (emblem over TOYOTA) is used on all paid communications. The horizontal logo is never used in communications." },
       { locked: true, text: "The Toyota logo is never duplicated in a layout. Dealer composite lock-ups are reserved for restricted-space and identity applications, so they are not placed on standard ads." },
       { locked: true, text: "Logo sits top left, centre or right; headline, CTA, tagline and disclaimers follow the logo/text alignment." },
+      { key: "showToyotaLogo", type: "toggle",
+        text: "Show the Toyota logo on the artwork (untick for creative where the logo is carried elsewhere — note the guidelines expect it on paid communications):" },
       { key: "logoScale", type: "range", min: 0.7, max: 1.4, step: 0.05,
         text: "Logo size follows the layout-shape specification (≈H/6 landscape, ≈H/7 square, width-based portrait). Fine-tune multiplier:" },
       { key: "marginScale", type: "range", min: 0.75, max: 1.25, step: 0.05,
@@ -207,6 +210,18 @@ const TEMPLATES = [
       h1: "The all-new {MODEL}",
       sub1: "Available for immediate delivery",
       cta: "Learn more",
+    },
+  },
+  {
+    id: "rangehero",
+    name: "Range hero — centred stack",
+    hint: "Full-bleed image, centred kicker + two-line giant headline (second line red), pill and dealer line under the vehicles.",
+    defaults: {
+      kicker: "Lead the pack in the",
+      h1: "NEW", h2: "{MODEL}",
+      sub1: "Take immediate delivery",
+      cta: "Across the range",
+      foot1: "at {DEALER}",
     },
   },
   {
