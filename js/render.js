@@ -1513,7 +1513,7 @@ function renderAd(canvas, size, templateId, state, assets, opts = {}) {
   ctx.__lookup = buildNudgeLookup(state);
 
   ctx.clearRect(0, 0, size.w, size.h);
-  if (Math.min(size.w, size.h) <= 300) {
+  if (Math.min(size.w, size.h) <= 300 && size.w > size.h) {
     drawMicro(ctx, size.w, size.h, state, assets, opts);
   } else {
     (TEMPLATE_RENDERERS[templateId] || drawFullBleed)(ctx, size.w, size.h, state, assets, opts);

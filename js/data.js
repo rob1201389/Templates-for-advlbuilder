@@ -172,6 +172,7 @@ const AD_SIZES = [
   { id: "ls",   label: "Landscape 16:9",           w: 1920, h: 1080, on: true  },
   { id: "pt",   label: "Story / Reel 9:16",        w: 1080, h: 1920, on: true  },
   { id: "fb",   label: "Link-ad banner 1200×628",  w: 1200, h: 628,  on: true  },
+  { id: "vb",   label: "Vertical banner 216×360",  w: 216,  h: 360,  on: true  },
   { id: "mrec", label: "MREC 300×250",             w: 300,  h: 250,  on: false },
   { id: "lb",   label: "Leaderboard 728×90",       w: 728,  h: 90,   on: false },
 ];
