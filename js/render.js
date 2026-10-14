@@ -1468,6 +1468,149 @@ function drawPriceTag(ctx, W, H, s, assets, opts) {
   }
 }
 
+/* 11. Deposit offer poster (after TMCA model-incentive posters, e.g.
+   HiLux Deposit Bonus A1): headline stack over the sky, vehicle centre,
+   big offer amount with stacked label, bold support line, detail lines,
+   disclaimers at the base. */
+function drawDeposit(ctx, W, H, s, assets, opts) {
+  const U = Math.min(W, H);
+  const chrome = s.branding === "paid";
+  const wide = W / H > 1.35;
+  if (assets.bg) {
+    drawBackground(ctx, W, H, assets, opts, 0.5, 0.45);
+  } else {
+    // golden-hour countryside fallback: soft teal sky to warm horizon,
+    // green hills below
+    const horizon = H * 0.55;
+    let g = ctx.createLinearGradient(0, 0, 0, horizon);
+    g.addColorStop(0, "#39606e"); g.addColorStop(0.45, "#7da3a4");
+    g.addColorStop(0.8, "#d9c89b"); g.addColorStop(1, "#ecd9a6");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizon);
+    const sun = ctx.createRadialGradient(W / 2, horizon, 0, W / 2, horizon, W * 0.5);
+    sun.addColorStop(0, "rgba(255,225,170,0.55)"); sun.addColorStop(1, "rgba(255,225,170,0)");
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, W, horizon);
+    g = ctx.createLinearGradient(0, horizon, 0, H);
+    g.addColorStop(0, "#5c6d38"); g.addColorStop(0.45, "#3a4a26");
+    g.addColorStop(1, "#1b2414");
+    ctx.fillStyle = g; ctx.fillRect(0, horizon, W, H - horizon);
+    if (CUR && CUR.scrimMode && CUR.scrimMode !== "none" && CUR.scrim > 0) {
+      ctx.fillStyle = CUR.scrimMode === "light"
+        ? `rgba(255,255,255,${CUR.scrim})` : `rgba(0,0,0,${CUR.scrim})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  // gentle scrims so white type reads on the sky and the base
+  let tg = ctx.createLinearGradient(0, 0, 0, H * 0.3);
+  tg.addColorStop(0, "rgba(8,28,34,0.42)"); tg.addColorStop(1, "rgba(8,28,34,0)");
+  ctx.fillStyle = tg; ctx.fillRect(0, 0, W, H * 0.3);
+  tg = ctx.createLinearGradient(0, H * 0.62, 0, H);
+  tg.addColorStop(0, "rgba(10,16,8,0)"); tg.addColorStop(1, "rgba(10,16,8,0.5)");
+  ctx.fillStyle = tg; ctx.fillRect(0, H * 0.62, W, H * 0.38);
+
+  const logo = chrome ? drawToyotaLogo(ctx, s, W, H, BRAND.white)
+    : Object.assign(logoSpec(W, H), { x: 0, y: logoSpec(W, H).margin, align: s.logoAlign || "right" });
+  if (chrome) drawDealerHeader(ctx, s, W, H, logo, BRAND.white);
+
+  const cx = wide ? W * 0.3 : W / 2;
+  const colW = wide ? W * 0.52 : W * 0.88;
+  const h1 = tok(s.h1, s), h2 = tok(s.h2, s), kicker = tok(s.kicker, s);
+  const offer = tok(s.offer, s), label = tok(s.offerLabel, s);
+  const sub1 = tok(s.sub1, s), sub2 = tok(s.sub2, s), cta = tok(s.cta, s);
+  const ctaOn = cta && s.branding !== "organic";
+
+  // headline stack over the sky
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let y = (chrome ? logo.y + logo.h : logo.margin) + logo.margin * (wide ? 0.6 : 1.2);
+  const base1 = H * (wide ? 0.13 : 0.052);
+  const p1 = fitText(ctx, h1.toUpperCase(), colW, base1, 800);
+  ctx.font = F(p1, 800); ctx.fillStyle = BRAND.white;
+  y += p1; ctx.fillText(h1.toUpperCase(), cx, y);
+  if (h2) {
+    const p2 = fitText(ctx, h2.toUpperCase(), colW * 0.72, p1, 800);
+    ctx.font = F(p2, 800);
+    y += p2 * 1.08; ctx.fillText(h2.toUpperCase(), cx, y);
+  }
+  if (kicker) {
+    const pk = fitText(ctx, kicker.toUpperCase(), colW, p1 * 0.42, 600);
+    ctx.font = F(pk, 600);
+    y += pk * 1.9; ctx.fillText(kicker.toUpperCase(), cx, y);
+  }
+
+  // base furniture / small print, measured before the offer block
+  let fTop;
+  if (chrome) {
+    fTop = drawBaseFurniture(ctx, s, W, H, logo, { ink: BRAND.white, surface: "dark" });
+  } else {
+    fTop = H - logo.margin;
+    if (s.disclaimer) {
+      const dp = Math.max(8, U * 0.013);
+      ctx.font = F(dp, 400); ctx.fillStyle = BRAND.white; ctx.globalAlpha = 0.85;
+      const lines = wrapText(ctx, s.disclaimer, W * 0.9);
+      let dy = H - U * 0.025;
+      for (let i = lines.length - 1; i >= 0; i--) { ctx.fillText(lines[i], W / 2, dy); dy -= dp * 1.35; }
+      ctx.globalAlpha = 1;
+      fTop = dy;
+    }
+  }
+
+  // offer lockup + support lines, bottom-anchored above the small print
+  const po = U * (wide ? 0.12 : 0.1);
+  const ps1 = U * 0.028, ps2 = U * 0.026, pp = U * 0.028;
+  ctx.font = F(ps2, 500);
+  const l2 = sub2 ? wrapText(ctx, sub2, colW) : [];
+  let total = 0;
+  if (offer) total += po * 1.05;
+  if (sub1) total += ps1 * 1.9;
+  if (l2.length) total += ps2 * 1.6 + (l2.length - 1) * ps2 * 1.3;
+  if (ctaOn) total += pp * 3.1;
+  const blockTop = Math.min(H * 0.92, fTop - U * 0.02) - total;
+
+  // vehicles between the headline and the offer block (the campaign
+  // photo usually carries the car; cutouts land here when uploaded)
+  if (wide) {
+    drawOverlayImg(ctx, W * 0.52, H * 0.22, W * 0.45, H * 0.58, true);
+  } else {
+    const zTop = Math.min(y + U * 0.02, H * 0.52);
+    drawOverlayImg(ctx, W * 0.03, zTop, W * 0.94, Math.max(H * 0.08, blockTop - U * 0.02 - zTop));
+  }
+
+  let yy = blockTop;
+  if (offer) {
+    // amount + stacked label words, centred as a group, baselines aligned
+    const words = label ? label.split(/\s+/).filter(Boolean) : [];
+    const pl = po * 0.34;
+    ctx.font = F(po, 800);
+    const aw = ctx.measureText(offer).width;
+    ctx.font = F(pl, 700);
+    const lw = words.length ? Math.max(...words.map((w) => ctx.measureText(w).width)) : 0;
+    const gap = words.length ? po * 0.16 : 0;
+    const sx = cx - (aw + gap + lw) / 2;
+    yy += po * 0.95;
+    ctx.font = F(po, 800); ctx.fillStyle = BRAND.white; ctx.textAlign = "left";
+    ctx.fillText(offer, sx, yy);
+    if (words.length) {
+      ctx.font = F(pl, 700);
+      let ly = yy - (words.length - 1) * pl * 1.12;
+      for (const w of words) { ctx.fillText(w, sx + aw + gap, ly); ly += pl * 1.12; }
+    }
+    ctx.textAlign = "center";
+    yy += po * 0.1;
+  }
+  if (sub1) {
+    ctx.font = F(ps1, 700); ctx.fillStyle = BRAND.white;
+    yy += ps1 * 1.9; ctx.fillText(sub1, cx, yy);
+  }
+  if (l2.length) {
+    ctx.font = F(ps2, 500); ctx.fillStyle = BRAND.white;
+    yy += ps2 * 1.6;
+    for (const ln of l2) { ctx.fillText(ln, cx, yy); yy += ps2 * 1.3; }
+    yy -= ps2 * 1.3;
+  }
+  if (ctaOn) {
+    drawCtaButton(ctx, cta.toUpperCase(), cx, yy + pp * 2.2, pp, BRAND.red, BRAND.white, W * 0.28);
+  }
+}
+
 const TEMPLATE_RENDERERS = {
   fullbleed: drawFullBleed,
   rangehero: drawRangeHero,
@@ -1479,6 +1622,7 @@ const TEMPLATE_RENDERERS = {
   lineup: drawLineup,
   saleburst: drawSaleBurst,
   pricetag: drawPriceTag,
+  deposit: drawDeposit,
 };
 
 function renderAd(canvas, size, templateId, state, assets, opts = {}) {

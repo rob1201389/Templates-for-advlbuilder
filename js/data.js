@@ -173,6 +173,7 @@ const AD_SIZES = [
   { id: "pt",   label: "Story / Reel 9:16",        w: 1080, h: 1920, on: true  },
   { id: "fb",   label: "Link-ad banner 1200×628",  w: 1200, h: 628,  on: true  },
   { id: "vb",   label: "Vertical banner 216×360",  w: 216,  h: 360,  on: true  },
+  { id: "a4",   label: "Poster A-ratio 2480×3508 (A4 @300dpi — scales to A1)", w: 2480, h: 3508, on: false },
   { id: "mrec", label: "MREC 300×250",             w: 300,  h: 250,  on: false },
   { id: "lb",   label: "Leaderboard 728×90",       w: 728,  h: 90,   on: false },
 ];
@@ -325,6 +326,21 @@ const TEMPLATES = [
       h1: "$5,000 Deposit Bonus^",
       tagline: "Drive away",
       cta: "See details",
+    },
+  },
+  {
+    id: "deposit",
+    name: "Deposit offer — poster",
+    hint: "TMCA model-incentive poster style: headline over the sky, vehicle centre, big offer amount with stacked label and support lines.",
+    defaults: {
+      h1: "Toyota {MODEL}",
+      h2: "{GRADE}",
+      kicker: "From the worksite to the weekend",
+      offer: "$4,000",
+      offerLabel: "Deposit Bonus*",
+      sub1: "for new and demo {MODEL} {GRADE} variants",
+      sub2: "with Toyota Finance. Excludes electric variants and Lease Products.",
+      cta: "",
     },
   },
 ];
